@@ -38,8 +38,8 @@ class ApplicationController < ActionController::Base
     if session[:mobile_param]
       session[:mobile_param] == "1"
     else
-      request.user_agent =~ /Mobile|webOS/
-    end
+      request.user_agent && request.user_agent.downcase =~ /mobile|iphone|webos|android|blackberry|midp|cldc/ && request.user_agent.downcase !~ /ipad/
+   end
   end
   helper_method :mobile_device?
 
