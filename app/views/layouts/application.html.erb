@@ -61,6 +61,11 @@
 								<% if params[:controller] == 'documents' && params[:action] == 'show' %>
 								<li><a data-toggle="modal" href="#help">Help</a></li>
 								<% end %>
+  								<% if mobile_device? %>
+								<li><%= link_to "Full Site", :mobile => 0 %></li>
+    							<% else %>
+								<li><%= link_to "Mobile Site", :mobile => 1 %></li>
+								<% end %>
 							</ul>
 							<a class="hidden-phone logo" href="/"><img src="/assets/hs-logo-trans-horiz.png"></a>
 							<ul class="nav" id="accountlinks">
