@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<!--[if IE 8]>         <html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Annotorious</title>
+
+  <%= stylesheet_link_tag "mobile", :media => "all" %>
+  <%= javascript_include_tag "mobile" %>
+
+</head>
+<body class="gray-background">
+
+  <!--BEGIN top nav-->
+
+  <div class="fixed contain-to-grid top-bar-background top-bar-bottom-shadow">
+       <nav class="top-bar top-bar-background">
+          <ul class="title-area">
+            <!-- Title Area -->
+
+            <!-- Remove the class "menu-icon" to get rid of menu icon. Take out "Menu" to just have icon alone -->
+              <li class="toggle-topbar"><a href="#"><span></span></a></li>
+            </ul>
+
+        <div class="row">
+          <div class="small-9 columns">
+            <a href="#" class="small button expand back-button-1">&#x25C0;&nbsp;BACK</a>
+            <h5 class="section-title-1"><%= @document.title %></h5>
+          </div>
+
+          <div class="small-3 columns add-button-included">
+
+          </div>
+        </div>
+      </nav>
+    </div>
+
+    <!--END top nav-->
+
+
+    <div class="row gray-background">
+      <div class="large-12 columns top-gap">
+      </div>
+    </div>
+
+
+    <div class="row gray-background">
+      <div class="large-12 columns top-gap">
+      </div>
+    </div>
+
+    <!--BEGIN document container-->
+
+    <div class="row gray-background">
+      <div class="large-12 columns">
+        <div class="row">
+          <div id="content" class="small-11 columns document-view-container">
+            <div role="main"><!-- Required for cases in which there's no HTML in the text -->
+              <%= @document.text.html_safe %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+   <!--END document container-->
+
+   <!-- Footer -->
+    <footer class="bottom-bar-background bottom-bar-top-shadow">
+      <div class="row bottom-bar-background">
+          <div class="large-12 columns">
+        <ul class="button-group even-5 expanded bottom-button-lineup">
+          <li><a href="#" class="tiny button bottom-button-1"><%= image_tag "TOC_off_36px.png" %><br><br>TOC</a></li>
+          <li><a href="#" class="tiny button bottom-button-1"><%= image_tag "marks_icon_off_36px.png" %><br><br>MARKS</a></li>
+          <li><a href="#" class="tiny button bottom-button-1"><%= image_tag "filters_off_36px.png" %><br><br>FILTERS</a></li>
+          <li><br><br></a></li>
+          <li><a href="#" class="tiny button bottom-button-1"><%= image_tag "display_off_36px.png" %><br><br>DISPLAY</a></li>
+        </ul>
+          </div>
+      </div>
+    </footer>
+
+
+
+
+
+  <script>
+    $(document).foundation();
+  </script>
+</body>
+</html>
