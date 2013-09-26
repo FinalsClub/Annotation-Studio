@@ -14,6 +14,7 @@
 //= require custom.modernizr
 //= require handlebars
 //= require foundation.min
+//= require showdown
 //= require annotator.min
 //= require annotator.filter.min
 //= require annotator.store.min
