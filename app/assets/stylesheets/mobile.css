@@ -12,4 +12,6 @@
  *= require "annotator.min.css"
  *= require "foundation.css"
  *= require "app.css"
+ *= require "annotator.touch.css"
+ *= require "offcanvas.css"
 */
