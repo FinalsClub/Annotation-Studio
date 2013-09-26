@@ -52,22 +52,25 @@
       </div>
     </div>
 
-    <!--BEGIN list of tappable (clickable) links such as documents, groups, etc. that will take you to that particular page-->
+    <div class="row gray-background">
+      <div class="large-12 columns top-gap">
+      </div>
+    </div>
 
+    <!--BEGIN list of tappable (clickable) links such as documents, groups, etc. that will take you to that particular page-->
     <div class="row gray-background">
       <div class="large-12 columns">
         <div class="row">
           <div class="large-8 large-offset-2 columns document-list">
-            <a href="#" class="button secondary expand document-button-1">Alice in Wonderland&nbsp;&nbsp;<div class="arrow-on-button"><b>&#8250;</b></div></a>
-            <a href="#" class="button secondary expand document-button-1">Moby Dick&nbsp;&nbsp;<div class="arrow-on-button"><b>&#8250;</b></div></a>
-            <a href="#" class="button secondary expand document-button-1">The Iliad&nbsp;&nbsp;<div class="arrow-on-button"><b>&#8250;</b></div></a>
-            <a href="#" class="button secondary expand document-button-1">The Odessey&nbsp;&nbsp;<div class="arrow-on-button"><b>&#8250;</b></div></a>
-            <a href="#" class="button secondary expand document-button-1">Robinson Crusoe&nbsp;&nbsp;<div class="arrow-on-button"><b>&#8250;</b></div></a>
-            <a href="#" class="button secondary expand document-button-1">Treasure Island&nbsp;&nbsp;<div class="arrow-on-button"><b>&#8250;</b></div></a>
-            <a href="#" class="button secondary expand document-button-1">Dude, Where's My Car?&nbsp;&nbsp;<div class="arrow-on-button"><b>&#8250;</b></div></a>
-            <a href="#" class="button secondary expand document-button-1">Winnie the Pooh&nbsp;&nbsp;<div class="arrow-on-button"><b>&#8250;</b></div></a>
-            <a href="#" class="button secondary expand document-button-1">The Meme Hustler&nbsp;&nbsp;<div class="arrow-on-button"><b>&#8250;</b></div></a>
-            <a href="#" class="button secondary expand document-button-1">The Communist Manifesto&nbsp;&nbsp;<div class="arrow-on-button"><b>&#8250;</b></div></a>
+            <% unless @documents.empty? || @documents.nil? %>
+              <% @documents.sort {|a, b| a.title.downcase <=> b.title.downcase }.each do |document| %>
+                <% if can? :read, document %>
+                  <a href=<%= document_path(document.friendly_id) %> class="button secondary expand document-button-1"><%= document.title %>&nbsp;&nbsp;<div class="arrow-on-button"><b>&#8250;</b></div></a>
+                  <% end %>
+                <% end %>
+            <% else %>
+              <span class="button secondary expand document-button-1">No documents to view. (Your account maybe be pending approval).&nbsp;&nbsp;<div class="arrow-on-button"><b>&#8250;</b></div></span>
+            <% end %>
           </div>
         </div>
       </div>
