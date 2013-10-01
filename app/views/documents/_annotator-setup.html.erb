@@ -40,7 +40,10 @@ jQuery(function ($) {
 	var sidebar = new Sidebar.App();
 	Backbone.history.start({pushState: true, root: window.location})
 
-	var studio = $('#textcontent').annotator();
+
+
+
+var studio = $('#textcontent').annotator();
 
 	studio.annotator('addPlugin', 'Markdown');
 	<% if current_user.has_role?(:admin) && ENV["ANNOTATOR_FILTER"] == 'true' %>
@@ -52,7 +55,7 @@ jQuery(function ($) {
 	studio.annotator('addPlugin', 'Auth', {
 		token: '<%= @jwt %>'
 	});
-	
+
 
 	studio.annotator('addPlugin', 'Store', {
 		prefix: '<%= ENV["API_URL"] %>',
@@ -83,9 +86,6 @@ jQuery(function ($) {
 		showViewPermissionsCheckbox: true,
 		showEditPermissionsCheckbox: false
 	});
-
-
-
 	var subscriber = $('#textcontent').annotator().data('annotator');
 
 	// Create a UUID for a given annotation if needed.
@@ -122,12 +122,12 @@ jQuery(function ($) {
 			console.info("Err...");
 		}
 	}, this);
-	
-	
+
+
 	var stopSpinner = function(){
 		$('#spinnermodal').modal('hide');
 	};
-	
+
 	var createAndAddUuid = function(annotation){
 		createUuid(annotation);
 		addUuid(annotation);
@@ -139,7 +139,7 @@ jQuery(function ($) {
 		    sidebar.listAnnotations(subscriber.dumpAnnotations());
 		}, 100);
 	};
-	
+
 	// Remove all comment icons and load sidebar with local data
 	var deleteFromSidebar =	function(annotation) {
 		$(".icon-comment").remove();
@@ -152,7 +152,7 @@ jQuery(function ($) {
 		var newAnn = new Sidebar.Annotation(annotation);
 		console.info(newAnn.get("uuid"));
 	};
-	
+
 
 	$('#userview').on('click', function (e) {
 		// $('#spinnermodal').modal('show');
@@ -247,7 +247,7 @@ jQuery(function ($) {
 	// When the local object is updated (contains previously created/stored UUID), load the sidebar from local data
 	subscriber.subscribe('annotationUpdated', loadSidebar);
 	subscriber.subscribe('annotationDeleted', deleteFromSidebar);
-	
+
 	mixpanel.track("Loaded Document");
 });
 </script>
