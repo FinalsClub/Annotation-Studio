@@ -117,9 +117,10 @@
 /* Adder Styles */
 
 .annotator-touch-controls {
+	z-index: 99999;
 	position: fixed;
-	bottom: 15px;
-	right: 15px;
+	bottom: 100px;
+	right: 20px;
 	min-width: auto;
 }
 
