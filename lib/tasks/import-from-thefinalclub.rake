@@ -43,6 +43,10 @@ namespace :import_from_thefinalclub do
 
       puts "Processing: " + title
 
+      textContent = content[2]
+      textContent.gsub!('<a>', '')
+      textContent.gsub!('</a>', '')
+
       @document = Document.new
       @document.title = title
       @document.author = work[2]
@@ -50,7 +54,7 @@ namespace :import_from_thefinalclub do
       @document.user_id = 1
       # TODO: What state should it be?
       @document.state = "draft"
-      @document.text = content[2]
+      @document.text = textContent
       @document.processed_at = DateTime.now
       @document.save!
 
@@ -80,16 +84,17 @@ namespace :import_from_thefinalclub do
         puts row
         test = row
       end
-
+      rs = con.query 'SELECT * FROM `users` where id = ' + test[1]
+      user = rs.fetch_row
       @post_ws = "/api/annotations"
 
       @payload = {
-        # user: req.body.user,
-        # username: req.body.username,
+        :user => user[7],
+        :username => user[7],
         # consumer: "annotationstudio.mit.edu",
         # annotator_schema_version: req.body.annotator_schema_version,
         :text => test[7],
-        :uri => "http://localhost:3000/documents/hamlet-act-iv-scene-i-a-room-in-the-castle",
+        :uri => "http://localhost:3000/documents/divine-comedy-longfellow-translation-purgatorio-canto-viii",
         # src: req.body.src,
         :quote => test[5],
         # tags: req.body.tags,
@@ -103,7 +108,12 @@ namespace :import_from_thefinalclub do
           :endOffset => test[4]
         }],
         # shapes: req.body.shapes,
-        # permissions: req.body.permissions,
+        :permissions => {
+          :read => ['andrew@finalsclub.org'],
+          :update => ['andrew@finalsclub.org'],
+          :delete => ['andrew@finalsclub.org'],
+          :admin => ['andrew@finalsclub.org']
+        },
         :legacy => true
       }.to_json
 
