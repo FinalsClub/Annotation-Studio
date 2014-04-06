@@ -18,6 +18,7 @@
 # t.integer  "upload_file_size"
 # t.datetime "upload_updated_at"
 # t.datetime "processed_at"
+# t.integer  "final_club_id"
 
 require "babosa" # allows cyrillic, other characters in titles (transliterates titles for URL use)
 
@@ -25,8 +26,9 @@ class Document < ActiveRecord::Base
   belongs_to :user, :autosave => true
   attr_accessible :title, :state, :chapters, :text, :user_id,
     :rep_privacy_list, :rep_group_list, :new_group, :author, :edition,
-    :publisher, :publication_date, :source, :rights_status, :upload
-    
+    :publisher, :publication_date, :source, :rights_status, :upload,
+    :final_club_id
+
   before_validation :add_title, on: :create, unless: :title?
   before_create :add_processed_at, unless: :uploaded?
 

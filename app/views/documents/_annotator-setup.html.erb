@@ -47,7 +47,7 @@ jQuery(function ($) {
       Store: {
           prefix: '<%= ENV["API_URL"] %>',
           annotationData: {
-              'uri': [location.protocol, '//', location.host, location.pathname].join(''),
+              'uri': "<%= @document.slug %>",
               "groups": groups,
               "subgroups": subgroups,
               // "username": 'Jamie F.',
@@ -59,7 +59,8 @@ jQuery(function ($) {
               'user': "<%= current_user.email %>",
               'mode': 'user', // default mode -- user can switch via sidebar button.
               'context': 'document',
-              'uri': [location.protocol, '//', location.host, location.pathname].join('')
+              'legacy': false,
+              'uri': "<%= @document.slug %>"
           }
       },
       Markdown: false, // use RichText instead
@@ -188,7 +189,8 @@ jQuery(function ($) {
       'user': "<%= current_user.email %>",
       'mode': event.data.mode,
       'context': 'document',
-      'uri': [location.protocol, '//', location.host, location.pathname].join('')
+      'legacy': true,
+      'uri': "<%= @document.slug %>"
     };
 
     var reload_data = reloadAnnotations(loadOptions);
