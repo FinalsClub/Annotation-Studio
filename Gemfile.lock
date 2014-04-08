@@ -191,7 +191,12 @@ GEM
       subexec (~> 0.2.1)
     multi_json (1.9.2)
     multi_xml (0.5.5)
+<<<<<<< HEAD
     multipart-post (2.0.0)
+=======
+    multipart-post (1.2.0)
+    mysql (2.9.1)
+>>>>>>> add mysql to gemfile for imports
     net-scp (1.0.4)
       net-ssh (>= 1.99.1)
     net-ssh (2.8.0)
@@ -362,6 +367,7 @@ DEPENDENCIES
   meta_request
   meta_search
   mini_magick
+  mysql
   newrelic_rpm
   nokogiri
   paperclip

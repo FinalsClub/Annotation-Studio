@@ -74,3 +74,5 @@ gem "figaro"
 gem 'will_paginate', '> 3.0'
 gem 'intercom-rails'
 gem 'runtimeerror_notifier'
+
+gem 'mysql'
