@@ -24,7 +24,7 @@ These are rough instructions on how to get Annotation Studio working on your loc
 - Create a PostgreSQL database
 - Copy `config/database.sample.yml` to `config/database.yml` _Do not check this into git_
 - Add PostgreSQL connection URI into database.yml
-- `Rake db migrate`
+- `rake db:migrate`
 - `rake db:seed`
 - ```rails s```
 
@@ -36,6 +36,9 @@ If you would like to run the application on Heroku (recommended), do the followi
   - Don't worry about providing db configuration, [Heroku will do it for you](https://devcenter.heroku.com/articles/heroku-postgresql#connecting-in-rails)
 - Use Figaro to load your `application.yml` into environment variables and communicate them to Heroku
   -  `rake figaro:heroku[$APPNAME]`
+- Push to heroku, then update the database
+  - `heroku run rake db:migrate`
+  - `heroku run rake db:seed`
 
 ## User Support and Developer forum
 http://support.annotationstudio.org
