@@ -24,6 +24,7 @@ development:
     AWS_BIN_NAME: # Bucket name
     AWS_REGION:
     DEVISE_SECRET_KEY:                     blah-blah # use: `rails g secret` to generate a value
+    EMAIL_DOMAIN: localhost:3000
 
 production:
     DEFAULT_NEW_USER_GROUP: public
@@ -54,3 +55,4 @@ production:
     AWS_BIN_NAME: # Bucket name
     AWS_REGION:
     DEVISE_SECRET_KEY:                     blah-blah # use: `rails g secret` to generate a value
+    EMAIL_DOMAIN:                          # Url it is being hosted from
