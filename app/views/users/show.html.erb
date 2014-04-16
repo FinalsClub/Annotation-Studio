@@ -3,47 +3,7 @@
 <script src="http://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.0.0/backbone-min.js"></script>
 <script src="http://cdnjs.cloudflare.com/ajax/libs/mustache.js/0.7.2/mustache.min.js"></script>
 <%= javascript_include_tag "widget" %>
-<script type="text/javascript" charset="utf-8">
-jQuery(function ($) {
-  var widget = new Widget.App();
-  var endpoint = '<%= ENV["API_URL"] %>';
-  var token = '<%= @jwt %>';
-  // Backbone.history.start({pushState: true, root: window.location})
-
-  var myLoadOptions = {
-    'limit': 10,
-    'groups': "<%= current_user.rep_group_list %>".split(/, /),
-    'subgroups': "<%= current_user.rep_subgroup_list %>".split(/, /),
-    'host': location.host,
-    'user': "<%= current_user.email %>",
-    'mode': 'user',
-    'context': 'dashboard',
-  };
-  var classLoadOptions = {
-    'limit': 10,
-    'groups': "<%= current_user.rep_group_list %>".split(/, /),
-    'subgroups': "<%= current_user.rep_subgroup_list %>".split(/, /),
-    'host': location.host,
-    'user': "<%= current_user.email %>",
-    'mode': 'class',
-    'context': 'dashboard',
-  };
-  var groupLoadOptions = {
-    'limit': 10,
-    'groups': "<%= current_user.rep_group_list %>".split(/, /),
-    'subgroups': "<%= current_user.rep_subgroup_list %>".split(/, /),
-    'host': location.host,
-    'user': "<%= current_user.email %>",
-    'mode': 'group',
-    'context': 'dashboard',
-  };
-
-  widget.listAnnotations('my-annotation-list', myLoadOptions, endpoint, token);
-  widget.listAnnotations('class-annotation-list', classLoadOptions, endpoint, token);
-  widget.listAnnotations('group-annotation-list', groupLoadOptions, endpoint, token);
-});
-
-</script>
+<%= render :partial => "annotations/list", :locals => {:load_limit => 10} %>
 <script type="text/template" id="user-comment-template">
   <span class="user-comment"><a href="{{uri}}#hl{{uuid}}" target="_blank">{{{text}}}</a></span>
 </script>
