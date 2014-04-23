@@ -76,3 +76,4 @@ gem 'intercom-rails'
 gem 'runtimeerror_notifier'
 
 gem 'mysql'
+gem 'seed_dump'

@@ -30,8 +30,8 @@ namespace :import_from_thefinalclub do
       while section = sections.fetch_hash do
         annotations = con.query 'SELECT * FROM `annotations` where section_id = ' + section["id"]
         if annotations.num_rows > 0
-          # Rake::Task["import_from_thefinalclub:section"].invoke(section["id"])
-          # Rake::Task["import_from_thefinalclub:section"].reenable
+          Rake::Task["import_from_thefinalclub:section"].invoke(section["id"])
+          Rake::Task["import_from_thefinalclub:section"].reenable
           Rake::Task["import_from_thefinalclub:section_annotations"].invoke(section["id"])
           Rake::Task["import_from_thefinalclub:section_annotations"].reenable
         end
