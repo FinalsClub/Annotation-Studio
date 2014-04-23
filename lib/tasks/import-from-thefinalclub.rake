@@ -4,6 +4,47 @@ require 'net/http'
 require 'json'
 
 namespace :import_from_thefinalclub do
+  task :all_works => :environment do
+    begin
+      con = Mysql.new 'localhost', 'root', 'root', 'finalclub', nil, "/Applications/MAMP/tmp/mysql/mysql.sock"
+      works = con.query 'SELECT * FROM `works`'
+
+      while work = works.fetch_hash do
+          Rake::Task["import_from_thefinalclub:work"].invoke(work["id"])
+          Rake::Task["import_from_thefinalclub:work"].reenable
+      end
+
+    rescue Mysql::Error => e
+      puts e
+
+    ensure
+      con.close if con
+    end
+  end
+
+  task :work, [:id] => :environment do |t, args|
+    begin
+      con = Mysql.new 'localhost', 'root', 'root', 'finalclub', nil, "/Applications/MAMP/tmp/mysql/mysql.sock"
+      sections = con.query 'SELECT * FROM `sections` where work_id = ' + args.id
+
+      while section = sections.fetch_hash do
+        annotations = con.query 'SELECT * FROM `annotations` where section_id = ' + section["id"]
+        if annotations.num_rows > 0
+          # Rake::Task["import_from_thefinalclub:section"].invoke(section["id"])
+          # Rake::Task["import_from_thefinalclub:section"].reenable
+          Rake::Task["import_from_thefinalclub:section_annotations"].invoke(section["id"])
+          Rake::Task["import_from_thefinalclub:section_annotations"].reenable
+        end
+      end
+
+    rescue Mysql::Error => e
+      puts e
+
+    ensure
+      con.close if con
+    end
+  end
+
   # desc "import files as documents"
   # # rake file_import:html_document\["../shkspr-annotations/A Midsummer Night  's Dream 16.html"\]
   # task :html_document, [:filepath] => :environment do |t, args|
@@ -27,9 +68,9 @@ namespace :import_from_thefinalclub do
       rs = con.query 'SELECT * FROM `sections` where id = ' + args.id
       section = rs.fetch_row
 
-      puts "Section: #{section}"
+      # puts "Section: #{section}"
       work_id = section[1]
-      puts "Work ID: #{work_id}"
+      # puts "Work ID: #{work_id}"
 
       rs = con.query 'SELECT * FROM `works` where id = ' + work_id
       work = rs.fetch_row
@@ -44,24 +85,27 @@ namespace :import_from_thefinalclub do
       puts "Processing: " + title
 
       # Some dont have content. This dies.  Should fix
-      textContent = content[2]
-      textContent.gsub!('<a>', '')
-      textContent.gsub!('</a>', '')
-      # textContent.gsub!(/\r\n\t  /, '')
-      # textContent.gsub!(/\r\n\t/, '')
-      # textContent.gsub!(/\r\n/, '')
+      if content
+        textContent = content[2]
+        textContent.gsub!('<a>', '')
+        textContent.gsub!('</a>', '')
+        # textContent.gsub!(/\r\n\t  /, '')
+        # textContent.gsub!(/\r\n\t/, '')
+        # textContent.gsub!(/\r\n/, '')
 
-      @document = Document.new
-      @document.title = title
-      @document.author = work[2]
-      # TODO: Change to specific user
-      @document.user_id = 1
-      # TODO: What state should it be?
-      @document.state = "published"
-      @document.text = textContent
-      @document.processed_at = DateTime.now
-      @document.final_club_id = args.id
-      @document.save!
+        @document = Document.new
+        @document.title = title
+        @document.author = work[2]
+        # TODO: Change to specific user
+        @document.user_id = 1
+        # TODO: What state should it be?
+        @document.state = "published"
+        @document.text = textContent
+        @document.processed_at = DateTime.now
+        @document.final_club_id = args.id
+        @document.final_club_work_id = work_id
+        @document.save!
+      end
 
     rescue Mysql::Error => e
       puts e.errno
@@ -82,13 +126,24 @@ namespace :import_from_thefinalclub do
     )
 
     document = Document.where(:final_club_id => args.id).first
+
+    if !document
+      puts "Document isn't in database (Probably had no content)"
+      next
+    end
+
+    if Document.last.text.scan(/<blockquote>|<h3>/).length != 0
+      puts "Blockquote or h3 found for section: #{args.id}"
+      next
+    end
+
     # +5 is <div>
     # "startOffset": 5654,
     # "endOffset": 5672,
     # startOffset = document.text.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ').enum_for(:scan, /Harry/).map { Regexp.last_match.begin(0) }.first+5
     # endOffset = document.text.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ').enum_for(:scan, /sitting/).map { Regexp.last_match.begin(0) }.last+5
     # docArray = document.text.gsub(/\t /, "\t").split(/<p>\r\n| |\r\n/).reject{|word| word =~ /^<\/p>$/i}
-    docArray = document.text.scan(/<br \/>|\S+<br \/>|\S+ ?/).map{ |word| word.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ') }
+    docArray = document.text.scan(/<br \/>|\S+<br \/>|\S+ ?/).map{ |word| word.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ').gsub(/&lsquo;/, '\'').gsub(/&rsquo;/, '\'').gsub(/&mdash;/, '-').gsub(/<p>/, '').gsub(/<\/p>/, '') }
 
     begin
       con = Mysql.new 'localhost', 'root', 'root', 'finalclub', nil, "/Applications/MAMP/tmp/mysql/mysql.sock"
@@ -99,7 +154,11 @@ namespace :import_from_thefinalclub do
         user = users.fetch_row
         @post_ws = "/api/annotations"
 
+        # TODO: Dont import deleted annotations
+
         # startOffset = docArray[0..test[3].to_i-3].join(" ").gsub(/ \t | \t|\t /, "\t").gsub(/ \t/, "\t").length
+
+        # 5 = "<div>".length
         startOffset = docArray[0..row[3].to_i-2].join("").length + 5
         endOffset = docArray[0..row[4].to_i-1].join("").length + 5#
 
@@ -136,8 +195,10 @@ namespace :import_from_thefinalclub do
         req = Net::HTTP::Post.new(@post_ws, initheader = {'Content-Type' =>'application/json', 'x-annotator-auth-token' => @jwt})
         req.body = @payload
         response = Net::HTTP.new('localhost', '5000').start {|http| http.request(req) }
-        puts "Response #{response.code} #{response.message}: #{response.body}"
+        # puts "Response #{response.code} #{response.message}: #{response.body}"
       end
+
+      puts "Imported section: #{args.id}"
 
     rescue Mysql::Error => e
       puts e.errno

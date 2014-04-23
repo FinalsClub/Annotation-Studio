@@ -1,4 +1,4 @@
-# t.string   "title"
+# t.text     "title"
 # t.text     "text"
 # t.datetime "created_at",          :null => false
 # t.datetime "updated_at",          :null => false
@@ -19,6 +19,7 @@
 # t.datetime "upload_updated_at"
 # t.datetime "processed_at"
 # t.integer  "final_club_id"
+# t.integer  "final_club_work_id"
 
 require "babosa" # allows cyrillic, other characters in titles (transliterates titles for URL use)
 
