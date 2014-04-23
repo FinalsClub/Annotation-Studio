@@ -91,7 +91,7 @@ namespace :import_from_thefinalclub do
         textContent.gsub!('</a>', '')
         # textContent.gsub!(/\r\n\t  /, '')
         # textContent.gsub!(/\r\n\t/, '')
-        # textContent.gsub!(/\r\n/, '')
+        textContent.gsub!(/\r\n/, '')
 
         @document = Document.new
         @document.title = title
@@ -143,7 +143,7 @@ namespace :import_from_thefinalclub do
     # startOffset = document.text.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ').enum_for(:scan, /Harry/).map { Regexp.last_match.begin(0) }.first+5
     # endOffset = document.text.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ').enum_for(:scan, /sitting/).map { Regexp.last_match.begin(0) }.last+5
     # docArray = document.text.gsub(/\t /, "\t").split(/<p>\r\n| |\r\n/).reject{|word| word =~ /^<\/p>$/i}
-    docArray = document.text.scan(/<br \/>|\S+<br \/>|\S+ ?/).map{ |word| word.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ').gsub(/&lsquo;/, '\'').gsub(/&rsquo;/, '\'').gsub(/&mdash;/, '-').gsub(/<p>/, '').gsub(/<\/p>/, '') }
+    docArray = document.text.scan(/<br \/>|\S+<br \/>|\S+<\/p>|\S+ ?/).map{ |word| word.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ').gsub(/&lsquo;/, '\'').gsub(/&rsquo;/, '\'').gsub(/&mdash;/, '-').gsub(/<p>/, '').gsub(/<\/p>/, '') }
 
     begin
       con = Mysql.new 'localhost', 'root', 'root', 'finalclub', nil, "/Applications/MAMP/tmp/mysql/mysql.sock"
