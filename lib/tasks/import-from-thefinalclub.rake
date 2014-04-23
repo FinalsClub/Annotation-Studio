@@ -194,7 +194,8 @@ namespace :import_from_thefinalclub do
 
         req = Net::HTTP::Post.new(@post_ws, initheader = {'Content-Type' =>'application/json', 'x-annotator-auth-token' => @jwt})
         req.body = @payload
-        response = Net::HTTP.new('localhost', '5000').start {|http| http.request(req) }
+        # response = Net::HTTP.new('localhost', '5000').start {|http| http.request(req) }
+        response = Net::HTTP.new('http://annotorious-store.herokuapp.com/').start {|http| http.request(req) }
         # puts "Response #{response.code} #{response.message}: #{response.body}"
       end
 
