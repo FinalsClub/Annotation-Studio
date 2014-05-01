@@ -48,10 +48,14 @@ jQuery(function ($) {
 
 	var loadOptions = {
 		'limit': 20,
+                <% if false %><%# prevent the next two lines from ruby exec %>
 		// 'groups': "<%= current_user.rep_group_list %>".split(/, /),
 		// 'subgroups': "<%= current_user.rep_subgroup_list %>".split(/, /),
+                <% end %>
 		'host': location.host,
+                <% if signed_in? %>
 		'user': "<%= current_user.email %>",
+                <% end %>
 		'mode': 'user',
 		'context': 'dashboard',
 	};

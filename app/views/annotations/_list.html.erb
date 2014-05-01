@@ -5,6 +5,7 @@ jQuery(function ($) {
   var token = '<%= @jwt %>';
   // Backbone.history.start({pushState: true, root: window.location})
 
+  <% if signed_in? %>
   var myLoadOptions = {
     'limit': <%= load_limit %>,
     'groups': "<%= current_user.rep_group_list %>".split(/, /),
@@ -32,6 +33,17 @@ jQuery(function ($) {
     'mode': 'group',
     'context': 'dashboard',
   };
+  <% else %>
+  var classLoadOptions = {
+    'limit': <%= load_limit %>,
+    'groups': ['public'],
+    'host': location.host,
+    'mode': 'class',
+    'context': 'search',
+  };
+  var myLoadOptions = classLoadOptions;
+  var groupLoadOptions = classLoadOptions;
+  <% end %>
 
   widget.listAnnotations('my-annotation-list', myLoadOptions, endpoint, token);
   widget.listAnnotations('class-annotation-list', classLoadOptions, endpoint, token);

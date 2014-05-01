@@ -7,16 +7,23 @@ class ApplicationController < ActionController::Base
   
   def signed_in?
     @now = DateTime.current().to_time.iso8601
+    @current_user = current_user
+    # ensure anonymous users can have an email field for the JWT secure token
+    @email = ''
+    if defined? @current_user and defined? @current_user.email and @current_user.email != ''
+      # ensure authorized users get the correct JWT secure token
+      @email = @current_user.email
+    end
     @jwt = JWT.encode(
         {
             'consumerKey' => ENV["API_CONSUMER"],
-            'userId' => current_user.email,
+            'userId' => @email,
             'issuedAt' => @now,
             'ttl' => 86400
         }, 
         ENV["API_SECRET"]
     )
-    gon.current_user = current_user
+    gon.current_user = @current_user
   end
   helper_method :signed_in?
 

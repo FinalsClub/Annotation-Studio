@@ -4,11 +4,14 @@ AnnotationStudio::Application.routes.draw do
   resources :documents
   resources :users, only: [:show, :edit]
 
+  # routes exposed anonymously
+  get 'annotations', to: 'annotations#index'
+  get 'annotations/:id', to: 'annotations#show'
+
+  # routes which require authenticated login
   authenticated :user do
     root :to => "users#show"
     get 'dashboard', to: 'users#show', as: :dashboard
-    get 'annotations', to: 'annotations#index'
-    get 'annotations/:id', to: 'annotations#show'
     get 'groups', to: 'groups#index'
     get 'groups/:id', to: 'groups#show'
   end
