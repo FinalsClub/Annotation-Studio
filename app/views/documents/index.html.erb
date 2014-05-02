@@ -1,11 +1,18 @@
 <%= stylesheet_link_tag "documents" %>
+<% if signed_in? %>
+<% @group_list = current_user.rep_group_list %>
+<% else %>
+<% @group_list = ['public'] %>
+<% end %>
 <div class="row">
 	<div class="span12">
 		<h1>Documents</h1>
 		<ul class="nav nav-tabs" id="document-tabs">
-      <li class="active"><a id="assigned-tab" href="#assigned" data-toggle="tab"><span class="badge"><%= Document.tagged_with(current_user.rep_group_list, :any => true).size %></span> Assigned</a></li>
+      <li class="active"><a id="assigned-tab" href="#assigned" data-toggle="tab"><span class="badge"><%= Document.tagged_with(@group_list, :any => true).size %></span> Assigned</a></li>
+      <% if signed_in? %>
       <li><a id="created-tab" href="#created" data-toggle="tab"><span class="badge"><%= current_user.documents.size %></span> Created</a></li>
-			<% if can? :manage, Document %>
+      <% end %>
+      <% if can? :manage, Document %>
       <li><a id="all-tab" href="#all" data-toggle="tab"><span class="badge"><%= Document.all.length %></span> All</a></li>
 			<% end %>
 		</ul>
@@ -20,8 +27,8 @@
 						<th>Status</th>
 						<th>Actions</th>
 					</tr>
-					<% if Document.tagged_with(current_user.rep_group_list, :any => true).any? %>
-					<% Document.order("created_at DESC").tagged_with(current_user.rep_group_list, :any => true).each do |document| %>
+					<% if Document.tagged_with(@group_list, :any => true).any? %>
+					<% Document.order("created_at DESC").tagged_with(@group_list, :any => true).each do |document| %>
 					<tr>
 						<td><%= link_to document.title, document_path(document.friendly_id), target: 'blank' %></td>
 						<td><%= document.author %></td>
@@ -63,7 +70,7 @@
 						<th>Status</th>
 						<th>Actions</th>
 					</tr>
-					<% if current_user.documents.any? %>
+					<% if signed_in? and current_user.documents.any? %>
 					<% current_user.documents.order("created_at DESC").each do |document| %>
 					<% if can? :read, document %>
 					<tr>
