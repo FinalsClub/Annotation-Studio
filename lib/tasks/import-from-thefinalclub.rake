@@ -30,8 +30,8 @@ namespace :import_from_thefinalclub do
       while section = sections.fetch_hash do
         annotations = con.query 'SELECT * FROM `annotations` where section_id = ' + section["id"]
         if annotations.num_rows > 0
-          Rake::Task["import_from_thefinalclub:section"].invoke(section["id"])
-          Rake::Task["import_from_thefinalclub:section"].reenable
+          # Rake::Task["import_from_thefinalclub:section"].invoke(section["id"])
+          # Rake::Task["import_from_thefinalclub:section"].reenable
           Rake::Task["import_from_thefinalclub:section_annotations"].invoke(section["id"])
           Rake::Task["import_from_thefinalclub:section_annotations"].reenable
         end
@@ -81,17 +81,18 @@ namespace :import_from_thefinalclub do
       # puts "Content: #{content}"
 
       title = work[1] + " - " + section[3]
+      title.gsub!("\\'", "'")
 
       puts "Processing: " + title
 
       # Some dont have content. This dies.  Should fix
       if content
         textContent = content[2]
-        textContent.gsub!('<a>', '')
-        textContent.gsub!('</a>', '')
-        # textContent.gsub!(/\r\n\t  /, '')
-        # textContent.gsub!(/\r\n\t/, '')
-        textContent.gsub!(/\r\n/, '')
+        # textContent.gsub!('<a>', '')
+        # textContent.gsub!('</a>', '')
+
+        # textContent.gsub!(/\r\n/, '')
+        # textContent.gsub!(/<br \/>/, '<br/>')
 
         @document = Document.new
         @document.title = title
@@ -132,10 +133,10 @@ namespace :import_from_thefinalclub do
       next
     end
 
-    if Document.last.text.scan(/<blockquote>|<h3>/).length != 0
-      puts "Blockquote or h3 found for section: #{args.id}"
-      next
-    end
+    # if Document.last.text.scan(/<blockquote>|<h3>/).length != 0
+    #   puts "Blockquote or h3 found for section: #{args.id}"
+    #   next
+    # end
 
     # +5 is <div>
     # "startOffset": 5654,
@@ -143,11 +144,26 @@ namespace :import_from_thefinalclub do
     # startOffset = document.text.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ').enum_for(:scan, /Harry/).map { Regexp.last_match.begin(0) }.first+5
     # endOffset = document.text.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ').enum_for(:scan, /sitting/).map { Regexp.last_match.begin(0) }.last+5
     # docArray = document.text.gsub(/\t /, "\t").split(/<p>\r\n| |\r\n/).reject{|word| word =~ /^<\/p>$/i}
-    docArray = document.text.scan(/<br \/>|\S+<br \/>|\S+<\/p>|\S+ ?/).map{ |word| word.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ').gsub(/&lsquo;/, '\'').gsub(/&rsquo;/, '\'').gsub(/&mdash;/, '-').gsub(/<p>/, '').gsub(/<\/p>/, '') }
+    #docArray = document.text.scan(/<br \/>|\S+<br \/>|\S+<\/p>|\S+<\/blockquote>|\S+<blockquote>|\S+ ?/).map{ |word| word.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ').gsub(/&lsquo;/, '\'').gsub(/&rsquo;/, '\'').gsub(/&mdash;/, '-').gsub(/<.*?>/, '') }#.gsub(/<p>/, '').gsub(/<\/p>/, '') }
+    # docArray = document.text.scan(/<br\/>|\S+<br\/>|\S+<\/p>|\S+<\/blockquote>|\S+<blockquote>|\S+ ?/).map{ |word| word.gsub(/<br\/>/, '').gsub(/&nbsp;/, ' ').gsub(/&lsquo;/, '\'').gsub(/&rsquo;/, '\'').gsub(/&mdash;/, '-').gsub(/<.*?>/, '') }
 
+
+
+    docArray = wordsArray(document.text)[1..-1].map{ |word| word.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ').gsub(/&lsquo;/, '\'').gsub(/&rsquo;/, '\'').gsub(/&mdash;/, '-') }
+    # docArray[1..-1].map! do |word|
+    #   # if word word.length
+    #     word.gsub(/<br \/>/, '')
+    #         .gsub(/&nbsp;/, ' ')
+    #         .gsub(/&lsquo;/, '\'')
+    #         .gsub(/&rsquo;/, '\'')
+    #         .gsub(/&mdash;/, '-')
+    #   # end
+    # end
+    puts docArray.map{ |word| '"' + word + '"'}
+    # docArray = document.text.scan(/<br\/>&nbsp;[^\s<>]+ ?|<br\/>|[^\s<>]+ ?/).map{ |word| word.gsub(/<br\/>/, '').gsub(/&nbsp;/, ' ').gsub(/&lsquo;/, '\'').gsub(/&rsquo;/, '\'').gsub(/&mdash;/, '-') }
     begin
       con = Mysql.new 'localhost', 'root', 'root', 'finalclub', nil, "/Applications/MAMP/tmp/mysql/mysql.sock"
-      rs = con.query 'SELECT * FROM `annotations` where section_id = ' + args.id
+      rs = con.query 'SELECT * FROM `annotations` where deleted_on is null and section_id = ' + args.id
 
       while row = rs.fetch_row do
         users = con.query 'SELECT * FROM `users` where id = ' + row[1]
@@ -159,8 +175,8 @@ namespace :import_from_thefinalclub do
         # startOffset = docArray[0..test[3].to_i-3].join(" ").gsub(/ \t | \t|\t /, "\t").gsub(/ \t/, "\t").length
 
         # 5 = "<div>".length
-        startOffset = docArray[0..row[3].to_i-2].join("").length + 5
-        endOffset = docArray[0..row[4].to_i-1].join("").length + 5#
+        startOffset = docArray[0..row[3].to_i-2].join(" ").length + 5
+        endOffset = docArray[0..row[4].to_i-1].join(" ").length + 5#
 
         @payload = {
           :user => user[7],
@@ -194,8 +210,8 @@ namespace :import_from_thefinalclub do
 
         req = Net::HTTP::Post.new(@post_ws, initheader = {'Content-Type' =>'application/json', 'x-annotator-auth-token' => @jwt})
         req.body = @payload
-        # response = Net::HTTP.new('localhost', '5000').start {|http| http.request(req) }
-        response = Net::HTTP.new('http://annotorious-store.herokuapp.com/').start {|http| http.request(req) }
+        response = Net::HTTP.new('localhost', '5000').start {|http| http.request(req) }
+        # response = Net::HTTP.new('annotorious-store.herokuapp.com').start {|http| http.request(req) }
         # puts "Response #{response.code} #{response.message}: #{response.body}"
       end
 
@@ -207,6 +223,64 @@ namespace :import_from_thefinalclub do
     ensure
       con.close if con
     end
+  end
+
+  def wordsArray(text)
+    magicShit = "####)(@*#)$*@!" # because wtf
+    text.gsub!('<br />', magicShit + " ")
+    text.gsub!('>', '> ')
+    text.gsub!('</', ' </')
+    wordsSplit = text.split(" ")
+
+    i = 0
+    wordsRaw = []
+    content = ''
+    canPrintWithSpan = true
+    htmlStarted = false
+
+    # puts wordsSplit.map{ |word| '"' + word + '"'}
+
+    wordsSplit.each do |word|
+      # puts word
+      addBr = false
+      word = word.strip
+
+      next if word.empty?
+      next if word[0] == '<' && word[-1] == '>'
+
+      i+=1
+      word.gsub!(magicShit, '<br />')
+      # Should not need these lines since I strip them on import
+      word.gsub!('<a>', '')
+      word.gsub!('</a>', '')
+
+      addBr = word.index('<br />') != nil
+      word.gsub!('<br />', '')
+
+      if word[0] == '<' && word.index('>') == nil
+        canPrintWithSpan = false
+        htmlStarted = true
+        i-=2
+      elsif htmlStarted && word.index('>') == nil
+        canPrintWithSpan = false
+        i-=1
+      elsif word.index('>') != nil
+        word = word[(word.index('>') + 1)..-1]
+        canPrintWithSpan = true
+        htmlStarted = false
+      end
+
+      if canPrintWithSpan
+        # puts "Concating: " + word
+        wordsRaw[i] = word
+      end
+
+      if addBr
+        wordsRaw[i] = wordsRaw[i] + '<br />'
+      end
+    end
+    return wordsRaw
+
   end
 end
 # gsub(/\t /, "\t").split(/<p>\r\n| |\r\n/).reject{|word| word =~ /^<\/p>$/i}
