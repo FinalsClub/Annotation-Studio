@@ -4,6 +4,9 @@ require 'net/http'
 require 'json'
 
 namespace :import_from_thefinalclub do
+
+  desc "import all works from thefinalclub database"
+  # rake import_from_thefinalclub:all_works
   task :all_works => :environment do
     begin
       con = Mysql.new 'localhost', 'root', 'root', 'finalclub', nil, "/Applications/MAMP/tmp/mysql/mysql.sock"
@@ -22,6 +25,8 @@ namespace :import_from_thefinalclub do
     end
   end
 
+  desc "import a work"
+  # rake import_from_thefinalclub:work[<work_id>]
   task :work, [:id] => :environment do |t, args|
     begin
       con = Mysql.new 'localhost', 'root', 'root', 'finalclub', nil, "/Applications/MAMP/tmp/mysql/mysql.sock"
@@ -62,6 +67,7 @@ namespace :import_from_thefinalclub do
   #   @document.save!
   # end
   desc "import section from database"
+  # rake import_from_thefinalclub:section[<section_id>]
   task :section, [:id] => :environment do |t, args|
     begin
       con = Mysql.new 'localhost', 'root', 'root', 'finalclub', nil, "/Applications/MAMP/tmp/mysql/mysql.sock"
@@ -116,6 +122,8 @@ namespace :import_from_thefinalclub do
     end
   end
 
+  desc "import section's annotations from database"
+  # rake import_from_thefinalclub:section_annotations[<section_id>]
   task :section_annotations, [:id] => :environment do |t, args|
     @jwt = JWT.encode({
         :consumerKey => ENV["API_CONSUMER"],
