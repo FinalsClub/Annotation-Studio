@@ -23,8 +23,10 @@ These are rough instructions on how to get Annotation Studio working on your loc
 - Install and setup PostgreSQL-server (see Laptop repo above)
 - Create a PostgreSQL database
 - Copy `config/database.sample.yml` to `config/database.yml` _Do not check this into git_
+- Install Devise configuration for the current Devise version
+- `rails g devise:install` (yes to override as needed)
 - Add PostgreSQL connection URI into database.yml
-- `Rake db migrate`
+- `rake db:migrate`
 - `rake db:seed`
 - ```rails s```
 
