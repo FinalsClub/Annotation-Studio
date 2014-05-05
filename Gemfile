@@ -29,7 +29,6 @@ end
 group :assets do
   gem "therubyracer"
   gem 'less-rails' #,   '~> 3.2.3'
-  gem 'sass-rails' #,   '~> 3.2.3'
   gem 'coffee-rails' #, '~> 3.2.1'
   gem 'uglifier' #, '>= 1.0.3'
 end
@@ -63,7 +62,7 @@ gem "gon"
 gem "nokogiri"
 
 gem 'activeadmin'
-gem 'sass-rails'
+gem 'sass-rails' #,   '~> 3.2.3'
 gem "meta_search"#,    '>= 1.1.0.pre'
 
 gem "figaro"
