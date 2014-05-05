@@ -1,6 +1,6 @@
 class DocumentsController < ApplicationController
-  before_filter :authenticate, :except => [:index]
-  skip_before_filter :authenticate_user!, :only => [:index]
+  before_filter :authenticate, :except => [:index, :show]
+  skip_before_filter :authenticate_user!, :only => [:index, :show]
   load_and_authorize_resource
 
   # GET /documents

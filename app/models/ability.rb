@@ -30,6 +30,7 @@ class Ability
       can [:read, :update], Document, { :user_id => user.id }
       can :destroy, Document, { :user_id => user.id, :published? => false }
       can :read, Document do |tors|
+        tors.rep_group_list.detect {|t| t == 'public'} or
         !(user.rep_group_list & tors.rep_group_list).empty?
       end
 
