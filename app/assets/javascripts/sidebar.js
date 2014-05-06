@@ -130,9 +130,8 @@ Sidebar.AnnotationListView = Backbone.View.extend({
 		$("span.annotator-hl").click(function(event) {
 			$("ul#annotation-list li").removeClass('hover');
 			$("span.highlightlink").tooltip('hide');
-			var str = this.id.toString();
-			var parts = str.match(/(hl)(.+)/).slice(1);
-			var targetid = "#sb" + parts[1];
+			var uuid = $(this).data('annotation').uuid;
+			var targetid = "#sb" + uuid;
 
 			// TODO: deal with the events in a more organized way (recompose them in functions)
 			$('div#annotation-well').animate({scrollTop:$(targetid).offset().top}, 100, function (){
