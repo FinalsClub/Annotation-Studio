@@ -1,4 +1,5 @@
 class DocumentsController < ApplicationController
+  before_filter :restore_jwt, :only => [:show]
   before_filter :authenticate, :except => [:index, :show]
   skip_before_filter :authenticate_user!, :only => [:index, :show]
   load_and_authorize_resource
@@ -108,5 +109,14 @@ class DocumentsController < ApplicationController
     items.collect do |i|
       i unless cannot? :read, i
     end
+  end
+
+  protected
+
+  def restore_jwt
+    puts "jwt before #{@jwt}"
+    signed_in?
+    puts "jwt after #{@jwt}"
+    @jwt
   end
 end
