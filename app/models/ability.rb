@@ -33,11 +33,14 @@ class Ability
         !(user.rep_group_list & tors.rep_group_list).empty?
       end
 
+    elsif user.has_role? :guest
+      cannot [:manage, :create, :update, :destroy], Document
+      can [:read, :list], Document do |tors|
+        !(user.rep_group_list & tors.rep_group_list).empty?
+      end
+
     else
       cannot :manage, :all
-      can :read, [Document] do |tors|
-        tors.rep_privacy_list.detect {|t| t == 'public'}
-      end
 
     end
     can :index, Document
