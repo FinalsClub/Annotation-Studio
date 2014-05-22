@@ -157,7 +157,8 @@ namespace :import_from_thefinalclub do
 
 
 
-    docArray = wordsArray(document.text)[1..-1].map{ |word| word.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ').gsub(/&lsquo;/, '\'').gsub(/&rsquo;/, '\'').gsub(/&mdash;/, '-') }
+    content, words = generate_content(document.text)
+    docArray = words[1..-1].map{ |word| word.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ').gsub(/&lsquo;/, '\'').gsub(/&rsquo;/, '\'').gsub(/&mdash;/, '-') }
     # docArray[1..-1].map! do |word|
     #   # if word word.length
     #     word.gsub(/<br \/>/, '')
@@ -233,61 +234,88 @@ namespace :import_from_thefinalclub do
     end
   end
 
-  def wordsArray(text)
-    magicShit = "####)(@*#)$*@!" # because wtf
-    text.gsub!('<br />', magicShit + " ")
-    text.gsub!('>', '> ')
-    text.gsub!('</', ' </')
-    wordsSplit = text.split(" ")
+  def magic_no
+    '####)(@*#)$*@!' # because wtf
+  end
 
-    i = 0
-    wordsRaw = []
+  def prepare_content(content)
+    content.gsub('<br />', "#{magic_no} ")
+           .gsub('>', '> ')
+           .gsub('</', ' </')
+  end
+
+  def get_words(content)
+    prepare_content(content).split(' ')
+  end
+
+  def prepare_word(word)
+    word.gsub(magic_no, '<br />')
+        .gsub('<a>', '')
+        .gsub('</a>', '')
+        .strip
+  end
+
+  def word_is_html(word)
+    word[0] == '<' && word[-1] == '>'
+  end
+
+  def generate_content(section_content)
+    words = get_words(section_content)
+    words_raw = []
     content = ''
-    canPrintWithSpan = true
-    htmlStarted = false
+    i = 0
+    can_print_with_span = true
+    html_started = false
 
     # puts wordsSplit.map{ |word| '"' + word + '"'}
 
-    wordsSplit.each do |word|
+    words.each do |word|
       # puts word
       addBr = false
       word = word.strip
 
       next if word.empty?
-      next if word[0] == '<' && word[-1] == '>'
+
+      if word_is_html(word)
+        content += word
+        next
+      end
 
       i+=1
-      word.gsub!(magicShit, '<br />')
-      # Should not need these lines since I strip them on import
-      word.gsub!('<a>', '')
-      word.gsub!('</a>', '')
+      word = prepare_word(word)
 
       addBr = word.index('<br />') != nil
       word.gsub!('<br />', '')
 
       if word[0] == '<' && word.index('>') == nil
-        canPrintWithSpan = false
-        htmlStarted = true
+        can_print_with_span = false
+        html_started = true
         i-=2
-      elsif htmlStarted && word.index('>') == nil
-        canPrintWithSpan = false
+      elsif html_started && word.index('>') == nil
+        can_print_with_span = false
         i-=1
       elsif word.index('>') != nil
+        content += word[0...(word.index('>') + 1)]
         word = word[(word.index('>') + 1)..-1]
-        canPrintWithSpan = true
-        htmlStarted = false
+        can_print_with_span = true
+        html_started = false
       end
 
-      if canPrintWithSpan
+      content_add = "#{word} "
+      if can_print_with_span
         # puts "Concating: " + word
-        wordsRaw[i] = word
+        content += "<span id=\"word_#{i}\">#{content_add}</span>"
+        words_raw[i] = word
+      else
+        content += content_add
       end
 
       if addBr
-        wordsRaw[i] = wordsRaw[i] + '<br />'
+        content += '<br />'
+        words_raw[i] += '<br />'
       end
     end
-    return wordsRaw
+    return content, words_raw
 
   end
 end
