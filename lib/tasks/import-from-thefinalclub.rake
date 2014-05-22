@@ -12,7 +12,7 @@ namespace :import_from_thefinalclub do
       con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
       works = con.query 'SELECT * FROM `works`'
 
-      while work = works.fetch_hash do
+      works.each_hash do |work|
           Rake::Task["import_from_thefinalclub:work"].invoke(work["id"])
           Rake::Task["import_from_thefinalclub:work"].reenable
       end
@@ -32,7 +32,7 @@ namespace :import_from_thefinalclub do
       con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
       sections = con.query 'SELECT * FROM `sections` where work_id = ' + args.id
 
-      while section = sections.fetch_hash do
+      sections.each_hash do |section|
         annotations = con.query 'SELECT * FROM `annotations` where section_id = ' + section["id"]
         if annotations.num_rows > 0
           # Rake::Task["import_from_thefinalclub:section"].invoke(section["id"])
@@ -72,28 +72,28 @@ namespace :import_from_thefinalclub do
     begin
       con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
       rs = con.query 'SELECT * FROM `sections` where id = ' + args.id
-      section = rs.fetch_row
+      section = rs.fetch_hash
 
       # puts "Section: #{section}"
-      work_id = section[1]
+      work_id = section['work_id']
       # puts "Work ID: #{work_id}"
 
       rs = con.query 'SELECT * FROM `works` where id = ' + work_id
-      work = rs.fetch_row
+      work = rs.fetch_hash
       # puts "Work: #{work}"
 
       rs = con.query 'SELECT * FROM `content` where section_id = ' + args.id
-      content = rs.fetch_row
+      content = rs.fetch_hash
       # puts "Content: #{content}"
 
-      title = work[1] + " - " + section[3]
+      title = work['title'] + " - " + section['name']
       title.gsub!("\\'", "'")
 
       puts "Processing: " + title
 
       # Some dont have content. This dies.  Should fix
       if content
-        textContent = content[2]
+        textContent = content['content']
         # textContent.gsub!('<a>', '')
         # textContent.gsub!('</a>', '')
 
@@ -102,7 +102,7 @@ namespace :import_from_thefinalclub do
 
         @document = Document.new
         @document.title = title
-        @document.author = work[2]
+        @document.author = work['author']
         # TODO: Change to specific user
         @document.user_id = 1
         # TODO: What state should it be?
@@ -173,9 +173,9 @@ namespace :import_from_thefinalclub do
       con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
       rs = con.query 'SELECT * FROM `annotations` where deleted_on is null and section_id = ' + args.id
 
-      while row = rs.fetch_row do
-        users = con.query 'SELECT * FROM `users` where id = ' + row[1]
-        user = users.fetch_row
+      rs.each_hash do |row|
+        users = con.query 'SELECT * FROM `users` where id = ' + row['user_id']
+        user = users.fetch_hash
         @post_ws = "/api/annotations"
 
         # TODO: Dont import deleted annotations
@@ -183,18 +183,18 @@ namespace :import_from_thefinalclub do
         # startOffset = docArray[0..test[3].to_i-3].join(" ").gsub(/ \t | \t|\t /, "\t").gsub(/ \t/, "\t").length
 
         # 5 = "<div>".length
-        startOffset = docArray[0..row[3].to_i-2].join(" ").length + 5
-        endOffset = docArray[0..row[4].to_i-1].join(" ").length + 5#
+        startOffset = docArray[0..row['start_index'].to_i-2].join(" ").length + 5
+        endOffset = docArray[0..row['end_index'].to_i-1].join(" ").length + 5#
 
         @payload = {
-          :user => user[7],
-          :username => user[7],
+          :user => user['username'],
+          :username => user['username'],
           # consumer: "annotationstudio.mit.edu",
           # annotator_schema_version: req.body.annotator_schema_version,
-          :text => row[7],
+          :text => row['annotation'],
           :uri => document.slug,
           # src: req.body.src,
-          :quote => row[5],
+          :quote => row['quote'],
           # tags: req.body.tags,
           :groups => ["public"],
           # subgroups: req.body.subgroups,
