@@ -9,7 +9,7 @@ namespace :import_from_thefinalclub do
   # rake import_from_thefinalclub:all_works
   task :all_works => :environment do
     begin
-      con = Mysql.new 'localhost', 'root', 'root', 'finalclub', nil, "/Applications/MAMP/tmp/mysql/mysql.sock"
+      con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
       works = con.query 'SELECT * FROM `works`'
 
       while work = works.fetch_hash do
@@ -29,7 +29,7 @@ namespace :import_from_thefinalclub do
   # rake import_from_thefinalclub:work[<work_id>]
   task :work, [:id] => :environment do |t, args|
     begin
-      con = Mysql.new 'localhost', 'root', 'root', 'finalclub', nil, "/Applications/MAMP/tmp/mysql/mysql.sock"
+      con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
       sections = con.query 'SELECT * FROM `sections` where work_id = ' + args.id
 
       while section = sections.fetch_hash do
@@ -70,7 +70,7 @@ namespace :import_from_thefinalclub do
   # rake import_from_thefinalclub:section[<section_id>]
   task :section, [:id] => :environment do |t, args|
     begin
-      con = Mysql.new 'localhost', 'root', 'root', 'finalclub', nil, "/Applications/MAMP/tmp/mysql/mysql.sock"
+      con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
       rs = con.query 'SELECT * FROM `sections` where id = ' + args.id
       section = rs.fetch_row
 
@@ -127,7 +127,7 @@ namespace :import_from_thefinalclub do
   task :section_annotations, [:id] => :environment do |t, args|
     @jwt = JWT.encode({
         :consumerKey => ENV["API_CONSUMER"],
-        :userId => 'hilker.j@gmail.com',
+        :userId => 'atrigent@gmail.com',
         :issuedAt => @now,
         :ttl => 86400
       },
@@ -170,7 +170,7 @@ namespace :import_from_thefinalclub do
     puts docArray.map{ |word| '"' + word + '"'}
     # docArray = document.text.scan(/<br\/>&nbsp;[^\s<>]+ ?|<br\/>|[^\s<>]+ ?/).map{ |word| word.gsub(/<br\/>/, '').gsub(/&nbsp;/, ' ').gsub(/&lsquo;/, '\'').gsub(/&rsquo;/, '\'').gsub(/&mdash;/, '-') }
     begin
-      con = Mysql.new 'localhost', 'root', 'root', 'finalclub', nil, "/Applications/MAMP/tmp/mysql/mysql.sock"
+      con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
       rs = con.query 'SELECT * FROM `annotations` where deleted_on is null and section_id = ' + args.id
 
       while row = rs.fetch_row do
