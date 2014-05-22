@@ -50,22 +50,6 @@ namespace :import_from_thefinalclub do
     end
   end
 
-  # desc "import files as documents"
-  # # rake file_import:html_document\["../shkspr-annotations/A Midsummer Night  's Dream 16.html"\]
-  # task :html_document, [:filepath] => :environment do |t, args|
-  #   file = File.join(Rails.root, args.filepath)
-
-  #   @document = Document.new
-  #   @document.title = File.basename(file)
-  #   @document.author = ""
-  #   # TODO: Change to specific user
-  #   @document.user_id = 1
-  #   # TODO: What state should it be?
-  #   @document.state = "pending"
-  #   @document.text = File.read(file)
-  #   @document.processed_at = DateTime.now
-  #   @document.save!
-  # end
   desc "import section from database"
   # rake import_from_thefinalclub:section[<section_id>]
   task :section, [:id] => :environment do |t, args|
@@ -74,46 +58,37 @@ namespace :import_from_thefinalclub do
       rs = con.query 'SELECT * FROM `sections` where id = ' + args.id
       section = rs.fetch_hash
 
-      # puts "Section: #{section}"
       work_id = section['work_id']
-      # puts "Work ID: #{work_id}"
 
       rs = con.query 'SELECT * FROM `works` where id = ' + work_id
       work = rs.fetch_hash
-      # puts "Work: #{work}"
 
       rs = con.query 'SELECT * FROM `content` where section_id = ' + args.id
       content = rs.fetch_hash
-      # puts "Content: #{content}"
+      if not content
+        # Sections with no content are chapter headings - we can skip them.
+        next
+      end
 
       title = work['title'] + " - " + section['name']
       title.gsub!("\\'", "'")
 
       puts "Processing: " + title
 
-      # Some dont have content. This dies.  Should fix
-      if content
-        textContent = content['content']
-        # textContent.gsub!('<a>', '')
-        # textContent.gsub!('</a>', '')
+      textContent = content['content']
 
-        # textContent.gsub!(/\r\n/, '')
-        # textContent.gsub!(/<br \/>/, '<br/>')
-
-        @document = Document.new
-        @document.title = title
-        @document.author = work['author']
-        # TODO: Change to specific user
-        @document.user_id = 1
-        # TODO: What state should it be?
-        @document.state = "published"
-        @document.text = textContent
-        @document.processed_at = DateTime.now
-        @document.final_club_id = args.id
-        @document.final_club_work_id = work_id
-        @document.save!
-      end
-
+      @document = Document.new
+      @document.title = title
+      @document.author = work['author']
+      # TODO: Change to specific user
+      @document.user_id = 1
+      # TODO: What state should it be?
+      @document.state = "published"
+      @document.text = textContent
+      @document.processed_at = DateTime.now
+      @document.final_club_id = args.id
+      @document.final_club_work_id = work_id
+      @document.save!
     rescue Mysql::Error => e
       puts e.errno
 
@@ -141,35 +116,9 @@ namespace :import_from_thefinalclub do
       next
     end
 
-    # if Document.last.text.scan(/<blockquote>|<h3>/).length != 0
-    #   puts "Blockquote or h3 found for section: #{args.id}"
-    #   next
-    # end
-
-    # +5 is <div>
-    # "startOffset": 5654,
-    # "endOffset": 5672,
-    # startOffset = document.text.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ').enum_for(:scan, /Harry/).map { Regexp.last_match.begin(0) }.first+5
-    # endOffset = document.text.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ').enum_for(:scan, /sitting/).map { Regexp.last_match.begin(0) }.last+5
-    # docArray = document.text.gsub(/\t /, "\t").split(/<p>\r\n| |\r\n/).reject{|word| word =~ /^<\/p>$/i}
-    #docArray = document.text.scan(/<br \/>|\S+<br \/>|\S+<\/p>|\S+<\/blockquote>|\S+<blockquote>|\S+ ?/).map{ |word| word.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ').gsub(/&lsquo;/, '\'').gsub(/&rsquo;/, '\'').gsub(/&mdash;/, '-').gsub(/<.*?>/, '') }#.gsub(/<p>/, '').gsub(/<\/p>/, '') }
-    # docArray = document.text.scan(/<br\/>|\S+<br\/>|\S+<\/p>|\S+<\/blockquote>|\S+<blockquote>|\S+ ?/).map{ |word| word.gsub(/<br\/>/, '').gsub(/&nbsp;/, ' ').gsub(/&lsquo;/, '\'').gsub(/&rsquo;/, '\'').gsub(/&mdash;/, '-').gsub(/<.*?>/, '') }
-
-
-
     content, words = generate_content(document.text)
     docArray = words[1..-1].map{ |word| word.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ').gsub(/&lsquo;/, '\'').gsub(/&rsquo;/, '\'').gsub(/&mdash;/, '-') }
-    # docArray[1..-1].map! do |word|
-    #   # if word word.length
-    #     word.gsub(/<br \/>/, '')
-    #         .gsub(/&nbsp;/, ' ')
-    #         .gsub(/&lsquo;/, '\'')
-    #         .gsub(/&rsquo;/, '\'')
-    #         .gsub(/&mdash;/, '-')
-    #   # end
-    # end
     puts docArray.map{ |word| '"' + word + '"'}
-    # docArray = document.text.scan(/<br\/>&nbsp;[^\s<>]+ ?|<br\/>|[^\s<>]+ ?/).map{ |word| word.gsub(/<br\/>/, '').gsub(/&nbsp;/, ' ').gsub(/&lsquo;/, '\'').gsub(/&rsquo;/, '\'').gsub(/&mdash;/, '-') }
     begin
       con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
       rs = con.query 'SELECT * FROM `annotations` where deleted_on is null and section_id = ' + args.id
@@ -181,11 +130,9 @@ namespace :import_from_thefinalclub do
 
         # TODO: Dont import deleted annotations
 
-        # startOffset = docArray[0..test[3].to_i-3].join(" ").gsub(/ \t | \t|\t /, "\t").gsub(/ \t/, "\t").length
-
         # 5 = "<div>".length
         startOffset = docArray[0..row['start_index'].to_i-2].join(" ").length + 5
-        endOffset = docArray[0..row['end_index'].to_i-1].join(" ").length + 5#
+        endOffset = docArray[0..row['end_index'].to_i-1].join(" ").length + 5
 
         @payload = {
           :user => user['username'],
@@ -203,8 +150,8 @@ namespace :import_from_thefinalclub do
           :ranges => [{
             :start => '/div',
             :end => '/div',
-            :startOffset => startOffset,#test[3],
-            :endOffset => endOffset#[test4]
+            :startOffset => startOffset,
+            :endOffset => endOffset
           }],
           # shapes: req.body.shapes,
           :permissions => {
@@ -267,12 +214,9 @@ namespace :import_from_thefinalclub do
     can_print_with_span = true
     html_started = false
 
-    # puts wordsSplit.map{ |word| '"' + word + '"'}
-
     words.each do |word|
-      # puts word
       addBr = false
-      word = word.strip
+      word.strip!
 
       next if word.empty?
 
@@ -290,10 +234,10 @@ namespace :import_from_thefinalclub do
       if word[0] == '<' && word.index('>') == nil
         can_print_with_span = false
         html_started = true
-        i-=2
+        i -= 2
       elsif html_started && word.index('>') == nil
         can_print_with_span = false
-        i-=1
+        i -= 1
       elsif word.index('>') != nil
         content += word[0...(word.index('>') + 1)]
         word = word[(word.index('>') + 1)..-1]
@@ -303,7 +247,6 @@ namespace :import_from_thefinalclub do
 
       content_add = "#{word} "
       if can_print_with_span
-        # puts "Concating: " + word
         content += "<span id=\"word_#{i}\">#{content_add}</span>"
         words_raw[i] = word
       else
@@ -319,5 +262,3 @@ namespace :import_from_thefinalclub do
 
   end
 end
-# gsub(/\t /, "\t").split(/<p>\r\n| |\r\n/).reject{|word| word =~ /^<\/p>$/i}
-# Document.last.text.split(/<p>\r\n\t| |\r\n/).reject{|word| word =~ /^\t$|^<\/p>$/i}[test[3]-2..test[4]-2]
