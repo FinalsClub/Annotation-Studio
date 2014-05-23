@@ -3,6 +3,9 @@ require 'mysql'
 require 'net/http'
 require 'json'
 
+require 'nokogiri'
+require 'open3'
+
 namespace :import_from_thefinalclub do
 
   desc "import all works from thefinalclub database"
@@ -45,6 +48,70 @@ namespace :import_from_thefinalclub do
     rescue Mysql::Error => e
       puts e
 
+    ensure
+      con.close if con
+    end
+  end
+
+  task :check_annotated_sections do
+    begin
+      con = Mysql.new('localhost', 'root', 'root', 'finalclub')
+      annotated_sections = con.query('select content.section_id, content.content from content where (select count(*) from annotations where annotations.section_id = content.section_id) > 0')
+
+      annotated_sections.each_hash do |row|
+        puts "Checking section #{row['section_id']}"
+
+        # A select few section contents include what looks like UTF-8, but
+        # the Mysql gem returns the content as ASCII-8BIT. So we force the
+        # encoding to UTF-8 here.
+        row['content'].force_encoding(Encoding::UTF_8)
+
+        def get_spans(doc)
+          doc.xpath('.//span').select do |span|
+            span['id'] =~ /word_(\d+)/
+          end
+        end
+
+        script = File.expand_path('../generate_content.php', __FILE__)
+        php_generated, status = Open3.capture2('php', script, row['section_id'])
+        php_generated.gsub!("\r\n", "\n")
+        ruby_generated, words = generate_content(row['content'])
+        ruby_generated.gsub!("\r\n", "\n")
+
+        php_parsed = Nokogiri::HTML::DocumentFragment.parse(php_generated)
+        ruby_parsed = Nokogiri::HTML::DocumentFragment.parse(ruby_generated)
+
+        php_spans = get_spans(php_parsed)
+        ruby_spans = get_spans(ruby_parsed)
+
+        if php_spans.length != ruby_spans.length
+          puts "php produces #{php_spans.length} spans, ruby produces #{ruby_spans.length}"
+        else
+          php_spans.zip(ruby_spans) do |p, r|
+            if p['id'] != r['id']
+              puts "different IDs: #{p['id']} and #{r['id']}"
+              break
+            end
+
+            ptext = p.text.rstrip
+            rtext = r.text
+            if ptext != rtext
+              puts "different text for ID #{p['id']}: #{ptext.inspect} and #{rtext.inspect}"
+              break
+            end
+          end
+        end
+
+        original_parsed = Nokogiri::HTML::DocumentFragment.parse(row['content'].gsub("\r\n", "\n"))
+
+        if original_parsed.text != ruby_parsed.text
+          puts 'original and generated are INEQUAL'
+        end
+
+        STDOUT.flush
+      end
+    rescue Mysql::Error => e
+      puts e
     ensure
       con.close if con
     end
