@@ -117,6 +117,17 @@ namespace :import_from_thefinalclub do
     end
   end
 
+  # translated/simplified from http://phpjs.org/functions/stripslashes/
+  # and http://git.php.net/?p=php-src.git;a=blob;f=ext/standard/string.c;hb=HEAD#l3272
+  def stripslashes(str)
+    str.gsub(/\\(.?)/) do |s|
+      case $1
+        when '0' then "\0"
+        else $1
+      end
+    end
+  end
+
   desc "import section from database"
   # rake import_from_thefinalclub:section[<section_id>]
   task :section, [:id] => :environment do |t, args|
@@ -137,8 +148,7 @@ namespace :import_from_thefinalclub do
         next
       end
 
-      title = work['title'] + " - " + section['name']
-      title.gsub!("\\'", "'")
+      title = stripslashes(work['title']) + " - " + stripslashes(section['name'])
 
       puts "Processing: " + title
 
@@ -146,7 +156,7 @@ namespace :import_from_thefinalclub do
 
       @document = Document.new
       @document.title = title
-      @document.author = work['author']
+      @document.author = stripslashes(work['author'])
       # TODO: Change to specific user
       @document.user_id = 1
       # TODO: What state should it be?
