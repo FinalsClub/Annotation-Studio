@@ -36,11 +36,8 @@ namespace :import_from_thefinalclub do
       sections = con.query 'SELECT * FROM `sections` where work_id = ' + args.id
 
       sections.each_hash do |section|
-        annotations = con.query 'SELECT * FROM `annotations` where section_id = ' + section["id"]
-        if annotations.num_rows > 0
-          Rake::Task["import_from_thefinalclub:section"].invoke(section["id"])
-          Rake::Task["import_from_thefinalclub:section"].reenable
-        end
+        Rake::Task["import_from_thefinalclub:section"].invoke(section["id"])
+        Rake::Task["import_from_thefinalclub:section"].reenable
       end
 
     rescue Mysql::Error => e
