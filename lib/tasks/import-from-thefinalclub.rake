@@ -40,8 +40,6 @@ namespace :import_from_thefinalclub do
         if annotations.num_rows > 0
           Rake::Task["import_from_thefinalclub:section"].invoke(section["id"])
           Rake::Task["import_from_thefinalclub:section"].reenable
-          Rake::Task["import_from_thefinalclub:section_annotations"].invoke(section["id"])
-          Rake::Task["import_from_thefinalclub:section_annotations"].reenable
         end
       end
 
@@ -166,6 +164,9 @@ namespace :import_from_thefinalclub do
       @document.final_club_id = args.id
       @document.final_club_work_id = work_id
       @document.save!
+
+      Rake::Task["import_from_thefinalclub:section_annotations"].invoke(args.id)
+      Rake::Task["import_from_thefinalclub:section_annotations"].reenable
     rescue Mysql::Error => e
       puts e.errno
 
