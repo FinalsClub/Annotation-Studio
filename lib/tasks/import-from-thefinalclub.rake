@@ -199,11 +199,11 @@ namespace :import_from_thefinalclub do
       rs = con.query 'SELECT * FROM `annotations` where deleted_on is null and section_id = ' + args.id
 
       rs.each_hash do |row|
+        next unless row['deleted_on'].nil?
+
         users = con.query 'SELECT * FROM `users` where id = ' + row['user_id']
         user = users.fetch_hash
         @post_ws = "/api/annotations"
-
-        # TODO: Dont import deleted annotations
 
         # 5 = "<div>".length
         startOffset = docArray[0..row['start_index'].to_i-2].join(" ").length + 5
