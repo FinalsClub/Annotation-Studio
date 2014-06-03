@@ -1,5 +1,5 @@
 class AnnotationsController < ApplicationController
-  before_filter :authenticate
+  # skip_before_filter :authenticate_user!, :only => ['index', 'show']
 
   def index
   end

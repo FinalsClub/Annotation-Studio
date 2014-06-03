@@ -1,12 +1,7 @@
 class ApplicationController < ActionController::Base
   protect_from_forgery
 
-  before_filter :authenticate_user!
-  # allow guest user to be generated prior to authentication
-  def authenticate_user!
-    current_user
-    super
-  end
+  # before_filter :authenticate_user!
 
   # add_breadcrumb :index, :root_path
 
@@ -56,10 +51,6 @@ class ApplicationController < ActionController::Base
     gon.current_user = current_user
   end
   helper_method :signed_in?
-
-  def authenticate
-    redirect_to root_path, notice: "You need to be signed in" unless signed_in?
-  end
 
   # Copied from Miximize!
   # https://github.com/ryanb/cancan/wiki/Exception-Handling

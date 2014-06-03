@@ -11,38 +11,23 @@ class Ability
 
     if user.has_role? :admin
       can :manage, :all
-
     elsif user.has_role? :teacher
-      cannot :manage, Document do |tors|
-        if tors.user.nil?  # This has been driving me insane.
-          false
-        else
-          tors.user.id == user.id
-        end
-      end
       can :create, Document
-      can [:read, :update], Document, { :user_id => user.id }
+      # TODO: Teacher can manage his/her own student documents?
+      can [:manage, :read, :update], Document, { :user_id => user.id }
       can :destroy, Document, { :user_id => user.id, :published? => false }
-
     elsif user.has_role? :student
-      cannot :manage, Document
       can :create, Document
       can [:read, :update], Document, { :user_id => user.id }
       can :destroy, Document, { :user_id => user.id, :published? => false }
+      # TODO: Possibly clean this up later
       can :read, Document do |tors|
         !(user.rep_group_list & tors.rep_group_list).empty?
       end
-
     elsif user.has_role? :guest
-      cannot [:manage, :create, :update, :destroy], Document
-      can [:read, :list], Document do |tors|
+      can [:read, :index], Document do |tors|
         !(user.rep_group_list & tors.rep_group_list).empty?
       end
-
-    else
-      cannot :manage, :all
-
     end
-    can :index, Document
   end
 end

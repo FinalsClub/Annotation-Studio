@@ -1,6 +1,4 @@
 class UsersController < ApplicationController
-  before_filter :authenticate
-
   def show
     if params[:id].nil? # if there is no user id in params, show current one
         @user = current_user
