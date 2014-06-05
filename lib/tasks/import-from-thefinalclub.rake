@@ -260,21 +260,37 @@ namespace :import_from_thefinalclub do
     '####)(@*#)$*@!' # because wtf
   end
 
+  def added_whitespace
+    "\ue000"
+  end
+
   def prepare_content(content)
-    content.gsub('<br />', "#{magic_no} ")
-           .gsub('>', '> ')
-           .gsub('</', ' </')
+    content.gsub('<br />', "#{magic_no}#{added_whitespace}")
+           .gsub('>', ">#{added_whitespace}")
+           .gsub('</', "#{added_whitespace}</")
   end
 
   def get_words(content)
-    prepare_content(content).split(' ')
+    split = prepare_content(content).split(/(?= |#{added_whitespace})|(?<= |#{added_whitespace})/)
+
+    words = [[]]
+    split.each do |s|
+      next if s == added_whitespace
+
+      if s == ' '
+        words[-1] << s
+      else
+        words << [s]
+      end
+    end
+
+    return words
   end
 
   def prepare_word(word)
     word.gsub(magic_no, '<br />')
         .gsub('<a>', '')
         .gsub('</a>', '')
-        .strip
   end
 
   def word_is_html(word)
@@ -289,14 +305,20 @@ namespace :import_from_thefinalclub do
     can_print_with_span = true
     html_started = false
 
-    words.each do |word|
+    content += words[0].join('')
+
+    words[1..-1].each do |(word, *whitespace)|
       addBr = false
+      matches = word.match(/\A(\s*).*?(\s*)\z/m)
       word.strip!
 
-      next if word.empty?
+      if word.empty?
+        content += matches[1] + matches[2] + whitespace.join('')
+        next
+      end
 
       if word_is_html(word)
-        content += word
+        content += matches[1] + word + matches[2] + whitespace.join('')
         next
       end
 
@@ -306,6 +328,7 @@ namespace :import_from_thefinalclub do
       addBr = word.index('<br />') != nil
       word.gsub!('<br />', '')
 
+      added_prefix = false
       if word[0] == '<' && word.index('>') == nil
         can_print_with_span = false
         html_started = true
@@ -314,19 +337,25 @@ namespace :import_from_thefinalclub do
         can_print_with_span = false
         i -= 1
       elsif word.index('>') != nil
-        content += word[0...(word.index('>') + 1)]
+        content += matches[1] + word[0...(word.index('>') + 1)]
+        added_prefix = true
         word = word[(word.index('>') + 1)..-1]
         can_print_with_span = true
         html_started = false
       end
 
-      content_add = "#{word} "
+      if not added_prefix
+        content += matches[1]
+      end
+
       if can_print_with_span
-        content += "<span id=\"word_#{i}\">#{content_add}</span>"
+        content += "<span id=\"word_#{i}\">#{word}</span>"
         words_raw[i] = word
       else
-        content += content_add
+        content += word
       end
+
+      content += matches[2] + whitespace.join('')
 
       if addBr
         content += '<br />'
