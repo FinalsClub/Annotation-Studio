@@ -191,9 +191,35 @@ namespace :import_from_thefinalclub do
       next
     end
 
-    content, words = generate_content(document.text)
-    docArray = words[1..-1].map{ |word| word.gsub(/<br \/>/, '').gsub(/&nbsp;/, ' ').gsub(/&lsquo;/, '\'').gsub(/&rsquo;/, '\'').gsub(/&mdash;/, '-') }
-    puts docArray.map{ |word| '"' + word + '"'}
+    def word_span?(node)
+      node and node.element? and node.name == 'span' and node['id'] =~ /^word_\d+$/
+    end
+
+    generated = generate_content(document.text)[0]
+    generated.gsub!("\r\n", "\n")
+    frag = Nokogiri::HTML::DocumentFragment.parse(generated)
+
+    frag.search('span').each do |span|
+      if word_span?(span) and span.search('text()').length == 0
+        span << Nokogiri::XML::Text.new('', frag.document)
+      end
+    end
+
+    cur_len = 0
+    starts = Hash.new { |h, k| h[k] = [] }
+    last_span = nil
+    frag.search('text()').each do |txt|
+      p = txt.parent
+
+      if word_span?(p) and p != last_span
+        starts[p['id']] << [cur_len, cur_len + p.text.length]
+
+        last_span = p
+      end
+
+      cur_len += txt.text.length
+    end
+
     begin
       con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
       rs = con.query 'SELECT * FROM `annotations` where deleted_on is null and section_id = ' + args.id
@@ -205,9 +231,17 @@ namespace :import_from_thefinalclub do
         user = users.fetch_hash
         @post_ws = "/api/annotations"
 
-        # 5 = "<div>".length
-        startOffset = docArray[0..row['start_index'].to_i-2].join(" ").length + 5
-        endOffset = docArray[0..row['end_index'].to_i-1].join(" ").length + 5
+        startOffset = starts["word_#{row['start_index']}"]
+        endOffset = starts["word_#{row['end_index']}"]
+
+        if startOffset.length > 1 or endOffset.length > 1
+          puts "on a duplicated span number"
+          next
+        end
+
+        # A little bit of whitespace in the view throws
+        # off our numbers by 5 characters.
+        view_whitespace = 5
 
         @payload = {
           :user => user['username'],
@@ -225,8 +259,8 @@ namespace :import_from_thefinalclub do
           :ranges => [{
             :start => '/div',
             :end => '/div',
-            :startOffset => startOffset,
-            :endOffset => endOffset
+            :startOffset => startOffset[0][0] + view_whitespace,
+            :endOffset => endOffset[0][1] + view_whitespace
           }],
           # shapes: req.body.shapes,
           :permissions => {
