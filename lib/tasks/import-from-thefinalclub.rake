@@ -172,30 +172,12 @@ namespace :import_from_thefinalclub do
     end
   end
 
-  desc "import section's annotations from database"
-  # rake import_from_thefinalclub:section_annotations[<section_id>]
-  task :section_annotations, [:id] => :environment do |t, args|
-    @jwt = JWT.encode({
-        :consumerKey => ENV["API_CONSUMER"],
-        :userId => 'atrigent@gmail.com',
-        :issuedAt => @now,
-        :ttl => 86400
-      },
-      ENV["API_SECRET"]
-    )
-
-    document = Document.where(:final_club_id => args.id).first
-
-    if !document
-      puts "Document isn't in database (Probably had no content)"
-      next
-    end
-
+  def migrate_annotations(text, id)
     def word_span?(node)
       node and node.element? and node.name == 'span' and node['id'] =~ /^word_\d+$/
     end
 
-    generated = generate_content(document.text)[0]
+    generated = generate_content(text)[0]
     generated.gsub!("\r\n", "\n")
     frag = Nokogiri::HTML::DocumentFragment.parse(generated)
 
@@ -222,14 +204,14 @@ namespace :import_from_thefinalclub do
 
     begin
       con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
-      rs = con.query 'SELECT * FROM `annotations` where deleted_on is null and section_id = ' + args.id
+      rs = con.query 'SELECT * FROM `annotations` where deleted_on is null and section_id = ' + id
+      annotation_objects = []
 
       rs.each_hash do |row|
         next unless row['deleted_on'].nil?
 
         users = con.query 'SELECT * FROM `users` where id = ' + row['user_id']
         user = users.fetch_hash
-        @post_ws = "/api/annotations"
 
         startOffset = starts["word_#{row['start_index']}"]
         endOffset = starts["word_#{row['end_index']}"]
@@ -243,13 +225,12 @@ namespace :import_from_thefinalclub do
         # off our numbers by 5 characters.
         view_whitespace = 5
 
-        @payload = {
+        annotation_objects << {
           :user => user['username'],
           :username => user['username'],
           # consumer: "annotationstudio.mit.edu",
           # annotator_schema_version: req.body.annotator_schema_version,
           :text => row['annotation'],
-          :uri => document.slug,
           # src: req.body.src,
           :quote => row['quote'],
           # tags: req.body.tags,
@@ -270,24 +251,50 @@ namespace :import_from_thefinalclub do
             :admin => ['andrew@finalsclub.org']
           },
           :legacy => true
-        }.to_json
-
-
-        req = Net::HTTP::Post.new(@post_ws, initheader = {'Content-Type' =>'application/json', 'x-annotator-auth-token' => @jwt})
-        req.body = @payload
-        response = Net::HTTP.new('localhost', '5000').start {|http| http.request(req) }
-        # response = Net::HTTP.new('annotorious-store.herokuapp.com').start {|http| http.request(req) }
-        # puts "Response #{response.code} #{response.message}: #{response.body}"
+        }
       end
 
-      puts "Imported section: #{args.id}"
-
+      return annotation_objects
     rescue Mysql::Error => e
       puts e.errno
 
     ensure
       con.close if con
     end
+  end
+
+  desc "import section's annotations from database"
+  # rake import_from_thefinalclub:section_annotations[<section_id>]
+  task :section_annotations, [:id] => :environment do |t, args|
+    @jwt = JWT.encode({
+        :consumerKey => ENV["API_CONSUMER"],
+        :userId => 'atrigent@gmail.com',
+        :issuedAt => @now,
+        :ttl => 86400
+      },
+      ENV["API_SECRET"]
+    )
+
+    document = Document.where(:final_club_id => args.id).first
+
+    if !document
+      puts "Document isn't in database (Probably had no content)"
+      next
+    end
+
+    @post_ws = "/api/annotations"
+    migrate_annotations(document.text, args.id).each do |obj|
+      obj[:uri] = document.slug
+
+      req = Net::HTTP::Post.new(@post_ws, initheader = {'Content-Type' =>'application/json', 'x-annotator-auth-token' => @jwt})
+      req.body = obj.to_json
+      response = Net::HTTP.new('localhost', '5000').start {|http| http.request(req) }
+      # response = Net::HTTP.new('annotorious-store.herokuapp.com').start {|http| http.request(req) }
+      # puts "Response #{response.code} #{response.message}: #{response.body}"
+    end
+
+    puts "Imported section: #{args.id}"
+
   end
 
   def magic_no
