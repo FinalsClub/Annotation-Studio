@@ -146,6 +146,7 @@ GEM
       json (~> 1.8)
       multi_xml (>= 0.5.2)
     i18n (0.6.9)
+    iconv (1.0.4)
     inherited_resources (1.4.1)
       has_scope (~> 0.6.0.rc)
       responders (~> 1.0.0.rc)
@@ -212,6 +213,8 @@ GEM
       cocaine (~> 0.5.3)
       mime-types
     pg (0.17.1)
+    phuby (1.0.0)
+      iconv
     polyamorous (0.5.0)
       activerecord (~> 3.0)
     polyglot (0.3.4)
@@ -371,6 +374,7 @@ DEPENDENCIES
   nokogiri
   paperclip
   pg
+  phuby
   pry-rails
   rabl
   rails (>= 3.2.12)

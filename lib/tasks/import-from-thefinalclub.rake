@@ -6,6 +6,8 @@ require 'json'
 require 'nokogiri'
 require 'open3'
 
+require 'phuby'
+
 namespace :import_from_thefinalclub do
 
   desc "import all works from thefinalclub database"
@@ -112,14 +114,12 @@ namespace :import_from_thefinalclub do
     end
   end
 
-  # translated/simplified from http://phpjs.org/functions/stripslashes/
-  # and http://git.php.net/?p=php-src.git;a=blob;f=ext/standard/string.c;hb=HEAD#l3272
   def stripslashes(str)
-    str.gsub(/\\(.?)/) do |s|
-      case $1
-        when '0' then "\0"
-        else $1
-      end
+    Phuby::Runtime.php do |rt|
+      rt['x'] = str
+      rt.eval('$x = stripslashes($x);')
+
+      rt['x']
     end
   end
 
