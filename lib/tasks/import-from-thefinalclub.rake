@@ -26,7 +26,7 @@ namespace :import_from_thefinalclub do
   # rake import_from_thefinalclub:work[<work_id>]
   task :work, [:id] => :environment do |t, args|
     con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
-    sections = con.query 'SELECT * FROM `sections` where work_id = ' + args.id
+    sections = con.query "SELECT * FROM `sections` where work_id = #{args.id}"
 
     sections.each_hash do |section|
       Rake::Task["import_from_thefinalclub:section"].invoke(section["id"])
@@ -105,15 +105,15 @@ namespace :import_from_thefinalclub do
   # rake import_from_thefinalclub:section[<section_id>]
   task :section, [:id] => :environment do |t, args|
     con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
-    rs = con.query 'SELECT * FROM `sections` where id = ' + args.id
+    rs = con.query "SELECT * FROM `sections` where id = #{args.id}"
     section = rs.fetch_hash
 
     work_id = section['work_id']
 
-    rs = con.query 'SELECT * FROM `works` where id = ' + work_id
+    rs = con.query "SELECT * FROM `works` where id = #{work_id}"
     work = rs.fetch_hash
 
-    rs = con.query 'SELECT * FROM `content` where section_id = ' + args.id
+    rs = con.query "SELECT * FROM `content` where section_id = #{args.id}"
     content = rs.fetch_hash
     if not content
       # Sections with no content are chapter headings - we can skip them.
@@ -174,13 +174,13 @@ namespace :import_from_thefinalclub do
     end
 
     con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
-    rs = con.query 'SELECT * FROM `annotations` where deleted_on is null and section_id = ' + id
+    rs = con.query "SELECT * FROM `annotations` where deleted_on is null and section_id = #{id}"
     annotation_objects = []
 
     rs.each_hash do |row|
       next unless row['deleted_on'].nil?
 
-      users = con.query 'SELECT * FROM `users` where id = ' + row['user_id']
+      users = con.query "SELECT * FROM `users` where id = #{row['user_id']}"
       user = users.fetch_hash
 
       startOffset = starts["word_#{row['start_index']}"]
