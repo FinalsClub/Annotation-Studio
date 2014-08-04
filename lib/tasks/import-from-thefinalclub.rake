@@ -13,104 +13,82 @@ namespace :import_from_thefinalclub do
   desc "import all works from thefinalclub database"
   # rake import_from_thefinalclub:all_works
   task :all_works => :environment do
-    begin
-      con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
-      works = con.query 'SELECT * FROM `works`'
+    con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
+    works = con.query 'SELECT * FROM `works`'
 
-      works.each_hash do |work|
-          Rake::Task["import_from_thefinalclub:work"].invoke(work["id"])
-          Rake::Task["import_from_thefinalclub:work"].reenable
-      end
-
-    rescue Mysql::Error => e
-      puts e
-
-    ensure
-      con.close if con
+    works.each_hash do |work|
+        Rake::Task["import_from_thefinalclub:work"].invoke(work["id"])
+        Rake::Task["import_from_thefinalclub:work"].reenable
     end
   end
 
   desc "import a work"
   # rake import_from_thefinalclub:work[<work_id>]
   task :work, [:id] => :environment do |t, args|
-    begin
-      con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
-      sections = con.query 'SELECT * FROM `sections` where work_id = ' + args.id
+    con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
+    sections = con.query 'SELECT * FROM `sections` where work_id = ' + args.id
 
-      sections.each_hash do |section|
-        Rake::Task["import_from_thefinalclub:section"].invoke(section["id"])
-        Rake::Task["import_from_thefinalclub:section"].reenable
-      end
-
-    rescue Mysql::Error => e
-      puts e
-
-    ensure
-      con.close if con
+    sections.each_hash do |section|
+      Rake::Task["import_from_thefinalclub:section"].invoke(section["id"])
+      Rake::Task["import_from_thefinalclub:section"].reenable
     end
   end
 
   task :check_annotated_sections do
-    begin
-      con = Mysql.new('localhost', 'root', 'root', 'finalclub')
-      annotated_sections = con.query('select content.section_id, content.content from content where (select count(*) from annotations where annotations.section_id = content.section_id) > 0')
+    con = Mysql.new('localhost', 'root', 'root', 'finalclub')
+    annotated_sections = con.query('select content.section_id, content.content from content where (select count(*) from annotations where annotations.section_id = content.section_id) > 0')
 
-      annotated_sections.each_hash do |row|
-        puts "Checking section #{row['section_id']}"
+    annotated_sections.each_hash do |row|
+      puts "Checking section #{row['section_id']}"
 
-        # A select few section contents include what looks like UTF-8, but
-        # the Mysql gem returns the content as ASCII-8BIT. So we force the
-        # encoding to UTF-8 here.
-        row['content'].force_encoding(Encoding::UTF_8)
+      # A select few section contents include what looks like UTF-8, but
+      # the Mysql gem returns the content as ASCII-8BIT. So we force the
+      # encoding to UTF-8 here.
+      row['content'].force_encoding(Encoding::UTF_8)
 
-        def get_spans(doc)
-          doc.xpath('.//span').select do |span|
-            span['id'] =~ /word_(\d+)/
-          end
+      def get_spans(doc)
+        doc.xpath('.//span').select do |span|
+          span['id'] =~ /word_(\d+)/
         end
-
-        script = File.expand_path('../generate_content.php', __FILE__)
-        php_generated, status = Open3.capture2('php', script, row['section_id'])
-        php_generated.gsub!("\r\n", "\n")
-        ruby_generated, words = generate_content(row['content'])
-        ruby_generated.gsub!("\r\n", "\n")
-
-        php_parsed = Nokogiri::HTML::DocumentFragment.parse(php_generated)
-        ruby_parsed = Nokogiri::HTML::DocumentFragment.parse(ruby_generated)
-
-        php_spans = get_spans(php_parsed)
-        ruby_spans = get_spans(ruby_parsed)
-
-        if php_spans.length != ruby_spans.length
-          puts "php produces #{php_spans.length} spans, ruby produces #{ruby_spans.length}"
-        else
-          php_spans.zip(ruby_spans) do |p, r|
-            if p['id'] != r['id']
-              puts "different IDs: #{p['id']} and #{r['id']}"
-              break
-            end
-
-            ptext = p.text.rstrip
-            rtext = r.text
-            if ptext != rtext
-              puts "different text for ID #{p['id']}: #{ptext.inspect} and #{rtext.inspect}"
-              break
-            end
-          end
-        end
-
-        original_parsed = Nokogiri::HTML::DocumentFragment.parse(row['content'].gsub("\r\n", "\n"))
-
-        if original_parsed.text != ruby_parsed.text
-          puts 'original and generated are INEQUAL'
-        end
-
-        STDOUT.flush
       end
-    rescue Mysql::Error => e
-      puts e
-    ensure
-      con.close if con
+
+      script = File.expand_path('../generate_content.php', __FILE__)
+      php_generated, status = Open3.capture2('php', script, row['section_id'])
+      php_generated.gsub!("\r\n", "\n")
+      ruby_generated, words = generate_content(row['content'])
+      ruby_generated.gsub!("\r\n", "\n")
+
+      php_parsed = Nokogiri::HTML::DocumentFragment.parse(php_generated)
+      ruby_parsed = Nokogiri::HTML::DocumentFragment.parse(ruby_generated)
+
+      php_spans = get_spans(php_parsed)
+      ruby_spans = get_spans(ruby_parsed)
+
+      if php_spans.length != ruby_spans.length
+        puts "php produces #{php_spans.length} spans, ruby produces #{ruby_spans.length}"
+      else
+        php_spans.zip(ruby_spans) do |p, r|
+          if p['id'] != r['id']
+            puts "different IDs: #{p['id']} and #{r['id']}"
+            break
+          end
+
+          ptext = p.text.rstrip
+          rtext = r.text
+          if ptext != rtext
+            puts "different text for ID #{p['id']}: #{ptext.inspect} and #{rtext.inspect}"
+            break
+          end
+        end
+      end
+
+      original_parsed = Nokogiri::HTML::DocumentFragment.parse(row['content'].gsub("\r\n", "\n"))
+
+      if original_parsed.text != ruby_parsed.text
+        puts 'original and generated are INEQUAL'
+      end
+
+      STDOUT.flush
     end
   end
 
@@ -126,50 +104,43 @@ namespace :import_from_thefinalclub do
   desc "import section from database"
   # rake import_from_thefinalclub:section[<section_id>]
   task :section, [:id] => :environment do |t, args|
-    begin
-      con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
-      rs = con.query 'SELECT * FROM `sections` where id = ' + args.id
-      section = rs.fetch_hash
+    con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
+    rs = con.query 'SELECT * FROM `sections` where id = ' + args.id
+    section = rs.fetch_hash
 
-      work_id = section['work_id']
+    work_id = section['work_id']
 
-      rs = con.query 'SELECT * FROM `works` where id = ' + work_id
-      work = rs.fetch_hash
+    rs = con.query 'SELECT * FROM `works` where id = ' + work_id
+    work = rs.fetch_hash
 
-      rs = con.query 'SELECT * FROM `content` where section_id = ' + args.id
-      content = rs.fetch_hash
-      if not content
-        # Sections with no content are chapter headings - we can skip them.
-        next
-      end
-
-      title = stripslashes(work['title']) + " - " + stripslashes(section['name'])
-
-      puts "Processing: " + title
-
-      textContent = content['content']
-
-      @document = Document.new
-      @document.title = title
-      @document.author = stripslashes(work['author'])
-      # TODO: Change to specific user
-      @document.user_id = 1
-      # TODO: What state should it be?
-      @document.state = "published"
-      @document.text = textContent
-      @document.processed_at = DateTime.now
-      @document.final_club_id = args.id
-      @document.final_club_work_id = work_id
-      @document.save!
-
-      Rake::Task["import_from_thefinalclub:section_annotations"].invoke(args.id)
-      Rake::Task["import_from_thefinalclub:section_annotations"].reenable
-    rescue Mysql::Error => e
-      puts e.errno
-
-    ensure
-      con.close if con
+    rs = con.query 'SELECT * FROM `content` where section_id = ' + args.id
+    content = rs.fetch_hash
+    if not content
+      # Sections with no content are chapter headings - we can skip them.
+      next
     end
+
+    title = stripslashes(work['title']) + " - " + stripslashes(section['name'])
+
+    puts "Processing: " + title
+
+    textContent = content['content']
+
+    @document = Document.new
+    @document.title = title
+    @document.author = stripslashes(work['author'])
+    # TODO: Change to specific user
+    @document.user_id = 1
+    # TODO: What state should it be?
+    @document.state = "published"
+    @document.text = textContent
+    @document.processed_at = DateTime.now
+    @document.final_club_id = args.id
+    @document.final_club_work_id = work_id
+    @document.save!
+
+    Rake::Task["import_from_thefinalclub:section_annotations"].invoke(args.id)
+    Rake::Task["import_from_thefinalclub:section_annotations"].reenable
   end
 
   def migrate_annotations(text, id)
@@ -202,65 +173,58 @@ namespace :import_from_thefinalclub do
       cur_len += txt.text.length
     end
 
-    begin
-      con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
-      rs = con.query 'SELECT * FROM `annotations` where deleted_on is null and section_id = ' + id
-      annotation_objects = []
+    con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
+    rs = con.query 'SELECT * FROM `annotations` where deleted_on is null and section_id = ' + id
+    annotation_objects = []
 
-      rs.each_hash do |row|
-        next unless row['deleted_on'].nil?
+    rs.each_hash do |row|
+      next unless row['deleted_on'].nil?
 
-        users = con.query 'SELECT * FROM `users` where id = ' + row['user_id']
-        user = users.fetch_hash
+      users = con.query 'SELECT * FROM `users` where id = ' + row['user_id']
+      user = users.fetch_hash
 
-        startOffset = starts["word_#{row['start_index']}"]
-        endOffset = starts["word_#{row['end_index']}"]
+      startOffset = starts["word_#{row['start_index']}"]
+      endOffset = starts["word_#{row['end_index']}"]
 
-        if startOffset.length > 1 or endOffset.length > 1
-          puts "on a duplicated span number"
-          next
-        end
-
-        # A little bit of whitespace in the view throws
-        # off our numbers by 5 characters.
-        view_whitespace = 5
-
-        annotation_objects << {
-          :user => user['username'],
-          :username => user['username'],
-          # consumer: "annotationstudio.mit.edu",
-          # annotator_schema_version: req.body.annotator_schema_version,
-          :text => row['annotation'],
-          # src: req.body.src,
-          :quote => row['quote'],
-          # tags: req.body.tags,
-          :groups => ["public"],
-          # subgroups: req.body.subgroups,
-          :uuid => SecureRandom.urlsafe_base64,
-          :ranges => [{
-            :start => '/div',
-            :end => '/div',
-            :startOffset => startOffset[0][0] + view_whitespace,
-            :endOffset => endOffset[0][1] + view_whitespace
-          }],
-          # shapes: req.body.shapes,
-          :permissions => {
-            :read => ['andrew@finalsclub.org'],
-            :update => ['andrew@finalsclub.org'],
-            :delete => ['andrew@finalsclub.org'],
-            :admin => ['andrew@finalsclub.org']
-          },
-          :legacy => true
-        }
+      if startOffset.length > 1 or endOffset.length > 1
+        puts "on a duplicated span number"
+        next
       end
 
-      return annotation_objects
-    rescue Mysql::Error => e
-      puts e.errno
+      # A little bit of whitespace in the view throws
+      # off our numbers by 5 characters.
+      view_whitespace = 5
 
-    ensure
-      con.close if con
+      annotation_objects << {
+        :user => user['username'],
+        :username => user['username'],
+        # consumer: "annotationstudio.mit.edu",
+        # annotator_schema_version: req.body.annotator_schema_version,
+        :text => row['annotation'],
+        # src: req.body.src,
+        :quote => row['quote'],
+        # tags: req.body.tags,
+        :groups => ["public"],
+        # subgroups: req.body.subgroups,
+        :uuid => SecureRandom.urlsafe_base64,
+        :ranges => [{
+          :start => '/div',
+          :end => '/div',
+          :startOffset => startOffset[0][0] + view_whitespace,
+          :endOffset => endOffset[0][1] + view_whitespace
+        }],
+        # shapes: req.body.shapes,
+        :permissions => {
+          :read => ['andrew@finalsclub.org'],
+          :update => ['andrew@finalsclub.org'],
+          :delete => ['andrew@finalsclub.org'],
+          :admin => ['andrew@finalsclub.org']
+        },
+        :legacy => true
+      }
     end
+
+    return annotation_objects
   end
 
   desc "import section's annotations from database"
