@@ -138,6 +138,32 @@ namespace :import_from_thefinalclub do
     Rake::Task["import_from_thefinalclub:section_annotations"].reenable
   end
 
+  def is_content(content)
+    if not content or content == '' or content == '<br />'
+      return false
+    end
+
+    Phuby::Runtime.php do |rt|
+      rt['content'] = content
+
+      rt.eval('$x = strlen(strip_tags(trim($content))) > 0;')
+
+      rt['x']
+    end
+  end
+
+  task :check_is_content do
+    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
+    rs = con.query 'select * from content'
+
+    rs.each do |row|
+      if not is_content(row['content'])
+        puts "content of section #{row['section_id']} is degenerate"
+        puts row['content'].inspect
+      end
+    end
+  end
+
   def migrate_annotations(con, text, id, start_offset=0)
     def word_span?(node)
       node and node.element? and node.name == 'span' and node['id'] =~ /^word_\d+$/
