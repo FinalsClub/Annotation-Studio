@@ -268,9 +268,10 @@ namespace :import_from_thefinalclub do
   def migrate_section_annotations(con, text, section_id, content_id, collections)
     migrated = migrate_annotations(con, text, section_id)
 
-    migrated.each do |annotator_obj|
+    migrated.each do |id, annotator_obj|
       collections[:annotations].insert({
         content_id: content_id,
+        legacy_id: id,
         annotation: annotator_obj
       })
     end
@@ -454,7 +455,7 @@ namespace :import_from_thefinalclub do
         next
       end
 
-      annotation_objects << {
+      annotation_objects << [row['id'], {
         :user => user['username'],
         :username => user['username'],
         # consumer: "annotationstudio.mit.edu",
@@ -478,9 +479,8 @@ namespace :import_from_thefinalclub do
           :update => ['andrew@finalsclub.org'],
           :delete => ['andrew@finalsclub.org'],
           :admin => ['andrew@finalsclub.org']
-        },
-        :legacy => true
-      }
+        }
+      }]
     end
 
     return annotation_objects
@@ -509,8 +509,9 @@ namespace :import_from_thefinalclub do
     @post_ws = "/api/annotations"
     # A little bit of whitespace in the view throws
     # off our numbers by 5 characters.
-    migrate_annotations(con, document.text, args.id, 5).each do |obj|
+    migrate_annotations(con, document.text, args.id, 5).each do |id, obj|
       obj[:uri] = document.slug
+      obj[:legacy_id] = id
 
       req = Net::HTTP::Post.new(@post_ws, initheader = {'Content-Type' =>'application/json', 'x-annotator-auth-token' => @jwt})
       req.body = obj.to_json
