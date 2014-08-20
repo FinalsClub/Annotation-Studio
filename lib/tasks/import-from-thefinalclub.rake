@@ -164,6 +164,102 @@ namespace :import_from_thefinalclub do
     end
   end
 
+  def get_parents(work_sections, cur_section)
+    ancestors = []
+
+    while cur_section
+      ancestors.unshift(cur_section)
+
+      cur_section = work_sections.find do |section|
+        section['id'] == cur_section['parent_id']
+      end
+    end
+
+    root = ancestors[0]
+    if root['parent_id']
+      puts "weirdness: could not find section #{root['parent_id']}, parent of section #{root['id']}, in work #{root['work_id']}"
+      return nil
+    end
+
+    ancestors
+  end
+
+  def show_work_hierarchies(con, id)
+    work_sections = []
+    con.query("select sections.*, content.content, section_parents.parent_id from sections " \
+              "left join content on sections.id = content.section_id " \
+              "left join section_parents on sections.id = section_parents.child_id " \
+              "where work_id = #{id} order by `order` asc, sections.id asc").each do |row|
+      work_sections << row
+    end
+
+    last_ancestors = []
+    work_sections.each do |section|
+      ancestors = get_parents(work_sections, section)
+      next unless ancestors
+
+      if ancestors.length - 1 > last_ancestors.length
+        puts "weirdness: increase of more than one level from previous entry!"
+      end
+
+      if ancestors.length > last_ancestors.length and
+         ancestors.take(last_ancestors.length) != last_ancestors
+        puts "weirdness: not a child of previous entry!"
+      elsif ancestors.length <= last_ancestors.length and
+            ancestors[0..-2] != last_ancestors.take(ancestors.length-1)
+        puts "weirdness: ancestors changed suddenly!"
+      end
+
+      output = "\t" * (ancestors.length - 1) + ancestors.map { |s| s['id'].to_s + ', ' }.join('')
+      cur =  stripslashes(ancestors[-1]['name'])
+      if ancestors.length > 1
+        prev = stripslashes(ancestors[-2]['name'])
+        prefix = "#{prev},"
+        if cur.starts_with?(prefix)
+          if cur.scan(prefix).length > 1
+            puts 'weirdess: more than one "prefix"'
+          end
+
+          if cur.index(prefix) != 0
+            puts 'weirdness: "prefix" not at beginning of string'
+          end
+
+          output += cur.gsub(prefix, '').inspect + ', real name: ' + cur.inspect
+        else
+          output += cur.inspect + ', no prefixing'
+        end
+      else
+        output += cur.inspect
+      end
+
+      if is_content(ancestors[-1]['content'])
+        if work_sections.any? { |section| section['parent_id'] == ancestors[-1]['id'] }
+          puts "weirdness: the following section heading has content!"
+        end
+
+        output += ", has content"
+      end
+
+      puts output
+      last_ancestors = ancestors
+    end
+  end
+
+  task :show_work_hierarchy, :id do |t, args|
+    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
+
+    show_work_hierarchies(con, args.id.to_i)
+  end
+
+  task :show_work_hierarchies do
+    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
+
+    con.query('select id from works').each do |work|
+      puts "work id: #{work['id']}"
+      show_work_hierarchies(con, work['id'].to_i)
+    end
+  end
+
   def migrate_annotations(con, text, id, start_offset=0)
     def word_span?(node)
       node and node.element? and node.name == 'span' and node['id'] =~ /^word_\d+$/
