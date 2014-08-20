@@ -1,5 +1,5 @@
 require 'rake'
-require 'mysql'
+require 'mysql2'
 require 'net/http'
 require 'json'
 
@@ -13,10 +13,10 @@ namespace :import_from_thefinalclub do
   desc "import all works from thefinalclub database"
   # rake import_from_thefinalclub:all_works
   task :all_works => :environment do
-    con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
+    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
     works = con.query 'SELECT * FROM `works`'
 
-    works.each_hash do |work|
+    works.each do |work|
         Rake::Task["import_from_thefinalclub:work"].invoke(work["id"])
         Rake::Task["import_from_thefinalclub:work"].reenable
     end
@@ -25,7 +25,7 @@ namespace :import_from_thefinalclub do
   desc "import a work"
   # rake import_from_thefinalclub:work[<work_id>]
   task :work, [:id] => :environment do |t, args|
-    con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
+    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
     sections = con.query "SELECT * FROM `sections` where work_id = #{args.id}"
 
     sections.each_hash do |section|
@@ -35,16 +35,11 @@ namespace :import_from_thefinalclub do
   end
 
   task :check_annotated_sections do
-    con = Mysql.new('localhost', 'root', 'root', 'finalclub')
+    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
     annotated_sections = con.query('select content.section_id, content.content from content where (select count(*) from annotations where annotations.section_id = content.section_id) > 0')
 
-    annotated_sections.each_hash do |row|
+    annotated_sections.each do |row|
       puts "Checking section #{row['section_id']}"
-
-      # A select few section contents include what looks like UTF-8, but
-      # the Mysql gem returns the content as ASCII-8BIT. So we force the
-      # encoding to UTF-8 here.
-      row['content'].force_encoding(Encoding::UTF_8)
 
       def get_spans(doc)
         doc.xpath('.//span').select do |span|
@@ -53,7 +48,7 @@ namespace :import_from_thefinalclub do
       end
 
       script = File.expand_path('../generate_content.php', __FILE__)
-      php_generated, status = Open3.capture2('php', script, row['section_id'])
+      php_generated, status = Open3.capture2('php', script, row['section_id'].to_s)
       php_generated.gsub!("\r\n", "\n")
       ruby_generated, words = generate_content(row['content'])
       ruby_generated.gsub!("\r\n", "\n")
@@ -104,17 +99,17 @@ namespace :import_from_thefinalclub do
   desc "import section from database"
   # rake import_from_thefinalclub:section[<section_id>]
   task :section, [:id] => :environment do |t, args|
-    con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
+    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
     rs = con.query "SELECT * FROM `sections` where id = #{args.id}"
-    section = rs.fetch_hash
+    section = rs.first
 
     work_id = section['work_id']
 
     rs = con.query "SELECT * FROM `works` where id = #{work_id}"
-    work = rs.fetch_hash
+    work = rs.first
 
     rs = con.query "SELECT * FROM `content` where section_id = #{args.id}"
-    content = rs.fetch_hash
+    content = rs.first
     if not content
       # Sections with no content are chapter headings - we can skip them.
       next
@@ -173,15 +168,15 @@ namespace :import_from_thefinalclub do
       cur_len += txt.text.length
     end
 
-    con = Mysql.new 'localhost', 'root', 'root', 'finalclub'
+    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
     rs = con.query "SELECT * FROM `annotations` where deleted_on is null and section_id = #{id}"
     annotation_objects = []
 
-    rs.each_hash do |row|
+    rs.each do |row|
       next unless row['deleted_on'].nil?
 
       users = con.query "SELECT * FROM `users` where id = #{row['user_id']}"
-      user = users.fetch_hash
+      user = users.first
 
       startOffset = starts["word_#{row['start_index']}"]
       endOffset = starts["word_#{row['end_index']}"]
