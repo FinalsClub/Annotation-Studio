@@ -11,11 +11,14 @@ require 'phuby'
 require 'mongo'
 
 namespace :import_from_thefinalclub do
+  def init_mysql
+    Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
+  end
 
   desc "import all works from thefinalclub database"
   # rake import_from_thefinalclub:all_works
   task :all_works => :environment do
-    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
+    con = init_mysql
     works = con.query 'SELECT * FROM `works`'
 
     works.each do |work|
@@ -27,7 +30,7 @@ namespace :import_from_thefinalclub do
   desc "import a work"
   # rake import_from_thefinalclub:work[<work_id>]
   task :work, [:id] => :environment do |t, args|
-    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
+    con = init_mysql
     sections = con.query "SELECT * FROM `sections` where work_id = #{args.id}"
 
     sections.each_hash do |section|
@@ -37,7 +40,7 @@ namespace :import_from_thefinalclub do
   end
 
   task :check_annotated_sections do
-    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
+    con = init_mysql
     annotated_sections = con.query('select content.section_id, content.content from content where (select count(*) from annotations where annotations.section_id = content.section_id) > 0')
 
     annotated_sections.each do |row|
@@ -101,7 +104,7 @@ namespace :import_from_thefinalclub do
   desc "import section from database"
   # rake import_from_thefinalclub:section[<section_id>]
   task :section, [:id] => :environment do |t, args|
-    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
+    con = init_mysql
     rs = con.query "SELECT * FROM `sections` where id = #{args.id}"
     section = rs.first
 
@@ -155,7 +158,7 @@ namespace :import_from_thefinalclub do
   end
 
   task :check_is_content do
-    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
+    con = init_mysql
     rs = con.query 'select * from content'
 
     rs.each do |row|
@@ -248,13 +251,13 @@ namespace :import_from_thefinalclub do
   end
 
   task :show_work_hierarchy, :id do |t, args|
-    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
+    con = init_mysql
 
     show_work_hierarchies(con, args.id.to_i)
   end
 
   task :show_work_hierarchies do
-    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
+    con = init_mysql
 
     con.query('select id from works').each do |work|
       puts "work id: #{work['id']}"
@@ -370,14 +373,14 @@ namespace :import_from_thefinalclub do
   end
 
   task :migrate_to_mongo, [:id, :uri] do |t, args|
-    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
+    con = init_mysql
     collections = init_mongo(args.uri)
 
     migrate_work(con, args.id, collections)
   end
 
   task :migrate_range_to_mongo, [:start, :length, :uri] do |t, args|
-    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
+    con = init_mysql
 
     query = "select id from works where id >= #{args.start} order by id"
     if args.length.to_i != -1
@@ -502,7 +505,7 @@ namespace :import_from_thefinalclub do
       next
     end
 
-    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
+    con = init_mysql
     @post_ws = "/api/annotations"
     # A little bit of whitespace in the view throws
     # off our numbers by 5 characters.
