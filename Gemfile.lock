@@ -58,6 +58,9 @@ GEM
     bourbon (3.1.8)
       sass (>= 3.2.0)
       thor
+    bson (1.10.2)
+    bson_ext (1.10.2)
+      bson (~> 1.10.2)
     builder (3.0.4)
     callsite (0.0.11)
     cancan (1.6.10)
@@ -190,6 +193,8 @@ GEM
     mime-types (1.25.1)
     mini_magick (3.7.0)
       subexec (~> 0.2.1)
+    mongo (1.10.2)
+      bson (= 1.10.2)
     multi_json (1.9.2)
     multi_xml (0.5.5)
     multipart-post (2.0.0)
@@ -346,6 +351,7 @@ DEPENDENCIES
   acts-as-taggable-on (~> 3.0.2)
   aws-sdk
   babosa
+  bson_ext
   cancan
   capybara-webkit
   carrierwave
@@ -369,6 +375,7 @@ DEPENDENCIES
   meta_request
   meta_search
   mini_magick
+  mongo
   mysql2
   newrelic_rpm
   nokogiri

@@ -8,6 +8,8 @@ require 'open3'
 
 require 'phuby'
 
+require 'mongo'
+
 namespace :import_from_thefinalclub do
 
   desc "import all works from thefinalclub database"
@@ -257,6 +259,148 @@ namespace :import_from_thefinalclub do
     con.query('select id from works').each do |work|
       puts "work id: #{work['id']}"
       show_work_hierarchies(con, work['id'].to_i)
+    end
+  end
+
+  def migrate_section_annotations(con, text, section_id, content_id, collections)
+    migrated = migrate_annotations(con, text, section_id)
+
+    migrated.each do |annotator_obj|
+      collections[:annotations].insert({
+        content_id: content_id,
+        annotation: annotator_obj
+      })
+    end
+
+    return migrated.length
+  end
+
+  def migrate_sections(con, work, mongo_work, collections, section_parent=nil)
+    parent_check = "parent_id " +
+      if section_parent
+        "= #{section_parent['id']}"
+      else
+        "is NULL"
+      end
+
+    rs = con.query("select sections.*, content.content from sections " \
+                   "left join section_parents on sections.id = child_id " \
+                   "left join content on sections.id = content.section_id " \
+                   "where work_id = #{work} and #{parent_check} " \
+                   "order by `order` asc, sections.id asc")
+
+    ret = []
+    annos = 0
+
+    rs.each do |section|
+      name = section['name']
+      if section_parent
+        name = name.sub(/^#{section_parent['name']},/, '')
+      end
+
+      obj = {
+        name: stripslashes(name).strip
+      }
+
+      children, child_annos = migrate_sections(con, work, mongo_work, collections, section)
+      if not children.empty?
+        obj[:subSections] = children
+        annos += child_annos
+      end
+
+      if is_content(section['content'])
+        obj[:content_id] = collections[:contents].insert({
+          work_id: mongo_work,
+          html: section['content']
+        })
+
+        annos += migrate_section_annotations(con,
+                                             section['content'],
+                                             section['id'],
+                                             obj[:content_id],
+                                             collections)
+      end
+
+      ret << obj
+    end
+
+    return ret, annos
+  end
+
+  def migrate_work(con, id, collections)
+    work = con.query("select * from works where id = #{id}").first
+
+    work_id = collections[:works].insert({})
+
+    sections, num_annos = migrate_sections(con, id, work_id, collections)
+
+    year = work['year']
+    if year == 0
+      year = nil
+    end
+
+    work_obj = {
+      _id: work_id,
+      title: stripslashes(work['title']),
+      author: Nokogiri::HTML(stripslashes(work['author'])).text,
+      summary: Nokogiri::HTML(stripslashes(work['summary'])).text,
+      year: year,
+      pageViews: work['page_views'],
+      createdAt: work['created_on'],
+      annotationsCount: num_annos,
+      sections: sections
+    }
+
+    intro = work['intro_essay']
+    if intro and not intro.empty?
+      work_obj[:introEssay] = stripslashes(intro)
+    end
+
+    collections[:works].save(work_obj)
+  end
+
+  def init_mongo(uri)
+    db = Mongo::MongoClient.from_uri(uri).db
+
+    return {
+      works: db.collection('works'),
+      contents: db.collection('sectionContents'),
+      annotations: db.collection('annotations')
+    }
+  end
+
+  task :migrate_to_mongo, [:id, :uri] do |t, args|
+    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
+    collections = init_mongo(args.uri)
+
+    migrate_work(con, args.id, collections)
+  end
+
+  task :migrate_range_to_mongo, [:start, :length, :uri] do |t, args|
+    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
+
+    query = "select id from works where id >= #{args.start} order by id"
+    if args.length.to_i != -1
+      query += " limit #{args.length}"
+    end
+
+    collections = init_mongo(args.uri)
+    con.query(query).each do |work|
+      puts "migrating work #{work['id']}..."
+      migrate_work(con, work['id'], collections)
+    end
+  end
+
+  task :wipe_mongo, :uri do |t, args|
+    3.downto(1) do |x|
+      print "\rWIPING DATABASE IN #{x}..."
+      sleep(1)
+    end
+    puts
+
+    init_mongo(args.uri).each_pair do |k, v|
+      puts "dropping collection #{k}..."
+      v.drop
     end
   end
 

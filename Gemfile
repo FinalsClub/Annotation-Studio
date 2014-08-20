@@ -24,7 +24,10 @@ group :development do
   gem 'sextant'
   gem 'meta_request'#, '0.2.1'
   gem 'highline'
+
   gem 'phuby'
+  gem 'mongo'
+  gem 'bson_ext'
 end
 
 group :assets do
