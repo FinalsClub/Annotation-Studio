@@ -138,7 +138,7 @@ namespace :import_from_thefinalclub do
     Rake::Task["import_from_thefinalclub:section_annotations"].reenable
   end
 
-  def migrate_annotations(text, id)
+  def migrate_annotations(text, id, start_offset=0)
     def word_span?(node)
       node and node.element? and node.name == 'span' and node['id'] =~ /^word_\d+$/
     end
@@ -186,10 +186,6 @@ namespace :import_from_thefinalclub do
         next
       end
 
-      # A little bit of whitespace in the view throws
-      # off our numbers by 5 characters.
-      view_whitespace = 5
-
       annotation_objects << {
         :user => user['username'],
         :username => user['username'],
@@ -205,8 +201,8 @@ namespace :import_from_thefinalclub do
         :ranges => [{
           :start => '/div',
           :end => '/div',
-          :startOffset => startOffset[0][0] + view_whitespace,
-          :endOffset => endOffset[0][1] + view_whitespace
+          :startOffset => startOffset[0][0] + start_offset,
+          :endOffset => endOffset[0][1] + start_offset
         }],
         # shapes: req.body.shapes,
         :permissions => {
@@ -242,7 +238,9 @@ namespace :import_from_thefinalclub do
     end
 
     @post_ws = "/api/annotations"
-    migrate_annotations(document.text, args.id).each do |obj|
+    # A little bit of whitespace in the view throws
+    # off our numbers by 5 characters.
+    migrate_annotations(document.text, args.id, 5).each do |obj|
       obj[:uri] = document.slug
 
       req = Net::HTTP::Post.new(@post_ws, initheader = {'Content-Type' =>'application/json', 'x-annotator-auth-token' => @jwt})
