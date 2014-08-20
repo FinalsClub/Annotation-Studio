@@ -287,7 +287,7 @@ namespace :import_from_thefinalclub do
         "is NULL"
       end
 
-    rs = con.query("select sections.*, content.content from sections " \
+    rs = con.query("select sections.*, content.id as content_id, content.content from sections " \
                    "left join section_parents on sections.id = child_id " \
                    "left join content on sections.id = content.section_id " \
                    "where work_id = #{work} and #{parent_check} " \
@@ -303,7 +303,8 @@ namespace :import_from_thefinalclub do
       end
 
       obj = {
-        name: stripslashes(name).strip
+        name: stripslashes(name).strip,
+        legacy_id: section['id']
       }
 
       children, child_annos = migrate_sections(con, work, mongo_work, collections, section)
@@ -315,6 +316,7 @@ namespace :import_from_thefinalclub do
       if is_content(section['content'])
         obj[:content_id] = collections[:contents].insert({
           work_id: mongo_work,
+          legacy_id: section['content_id'],
           html: section['content']
         })
 
@@ -352,7 +354,8 @@ namespace :import_from_thefinalclub do
       pageViews: work['page_views'],
       createdAt: work['created_on'],
       annotationsCount: num_annos,
-      sections: sections
+      sections: sections,
+      legacy_id: id
     }
 
     intro = work['intro_essay']
