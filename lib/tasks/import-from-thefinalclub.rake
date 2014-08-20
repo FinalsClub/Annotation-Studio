@@ -19,8 +19,8 @@ namespace :import_from_thefinalclub do
     works = con.query 'SELECT * FROM `works`'
 
     works.each do |work|
-        Rake::Task["import_from_thefinalclub:work"].invoke(work["id"])
-        Rake::Task["import_from_thefinalclub:work"].reenable
+      Rake::Task["import_from_thefinalclub:work"].invoke(work["id"])
+      Rake::Task["import_from_thefinalclub:work"].reenable
     end
   end
 
