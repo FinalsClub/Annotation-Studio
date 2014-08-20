@@ -138,7 +138,7 @@ namespace :import_from_thefinalclub do
     Rake::Task["import_from_thefinalclub:section_annotations"].reenable
   end
 
-  def migrate_annotations(text, id, start_offset=0)
+  def migrate_annotations(con, text, id, start_offset=0)
     def word_span?(node)
       node and node.element? and node.name == 'span' and node['id'] =~ /^word_\d+$/
     end
@@ -168,7 +168,6 @@ namespace :import_from_thefinalclub do
       cur_len += txt.text.length
     end
 
-    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
     rs = con.query "SELECT * FROM `annotations` where deleted_on is null and section_id = #{id}"
     annotation_objects = []
 
@@ -237,10 +236,11 @@ namespace :import_from_thefinalclub do
       next
     end
 
+    con = Mysql2::Client.new(host: 'localhost', username: 'root', password: 'root', database: 'finalclub')
     @post_ws = "/api/annotations"
     # A little bit of whitespace in the view throws
     # off our numbers by 5 characters.
-    migrate_annotations(document.text, args.id, 5).each do |obj|
+    migrate_annotations(con, document.text, args.id, 5).each do |obj|
       obj[:uri] = document.slug
 
       req = Net::HTTP::Post.new(@post_ws, initheader = {'Content-Type' =>'application/json', 'x-annotator-auth-token' => @jwt})
