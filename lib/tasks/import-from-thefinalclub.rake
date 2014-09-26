@@ -579,11 +579,6 @@ namespace :import_from_thefinalclub do
       startOffset = starts["word_#{row['start_index']}"]
       endOffset = starts["word_#{row['end_index']}"]
 
-      if startOffset.length > 1 or endOffset.length > 1
-        puts "on a duplicated span number"
-        next
-      end
-
       annotation_objects << [row['id'], {
         :user => user['username'],
         :username => user['username'],
