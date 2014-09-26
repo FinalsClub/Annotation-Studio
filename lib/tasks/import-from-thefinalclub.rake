@@ -402,11 +402,26 @@ namespace :import_from_thefinalclub do
       year = nil
     end
 
+    intro = work['intro_essay']
+    if intro and not intro.empty?
+      intro = stripslashes(intro)
+    else
+      intro = nil
+    end
+
+    summary = work['summary']
+    if summary and not summary.empty?
+      summary = Nokogiri::HTML(stripslashes(work['summary'])).text
+    else
+      summary = nil
+    end
+
     work_obj = {
       _id: work_id,
       title: stripslashes(work['title']),
       author: Nokogiri::HTML(stripslashes(work['author'])).text,
-      summary: Nokogiri::HTML(stripslashes(work['summary'])).text,
+      summary: summary,
+      introEssay: intro,
       year: year,
       pageViews: work['page_views'],
       createdAt: work['created_on'],
@@ -414,11 +429,6 @@ namespace :import_from_thefinalclub do
       sections: sections,
       legacy_id: id
     }
-
-    intro = work['intro_essay']
-    if intro and not intro.empty?
-      work_obj[:introEssay] = stripslashes(intro)
-    end
 
     collections[:works].save(work_obj)
   end
