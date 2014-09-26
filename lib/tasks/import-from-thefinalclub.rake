@@ -393,10 +393,6 @@ namespace :import_from_thefinalclub do
   def migrate_work(con, id, collections)
     work = con.query("select * from works where id = #{id}").first
 
-    work_id = collections[:works].insert({})
-
-    sections, num_annos = migrate_sections(con, id, work_id, collections)
-
     year = work['year']
     if year == 0
       year = nil
@@ -416,8 +412,7 @@ namespace :import_from_thefinalclub do
       summary = nil
     end
 
-    work_obj = {
-      _id: work_id,
+    work_id = collections[:works].insert({
       title: stripslashes(work['title']).strip,
       author: Nokogiri::HTML(stripslashes(work['author'])).text.strip,
       summary: summary,
@@ -425,12 +420,15 @@ namespace :import_from_thefinalclub do
       year: year,
       pageViews: work['page_views'],
       createdAt: work['created_on'],
+      legacy_id: id
+    })
+
+    sections, num_annos = migrate_sections(con, id, work_id, collections)
+
+    collections[:works].update({ _id: work_id }, { '$set' => {
       annotationsCount: num_annos,
       sections: sections,
-      legacy_id: id
-    }
-
-    collections[:works].save(work_obj)
+    }})
   end
 
   task :resolve_links, :uri do |t, args|
