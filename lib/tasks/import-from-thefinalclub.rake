@@ -506,7 +506,7 @@ namespace :import_from_thefinalclub do
     con = init_mysql
     collections = init_mongo(args.uri)
 
-    migrate_work(con, args.id, collections)
+    migrate_work(con, args.id.to_i, collections)
   end
 
   task :migrate_range_to_mongo, [:start, :length, :uri] do |t, args|
@@ -638,7 +638,7 @@ namespace :import_from_thefinalclub do
     @post_ws = "/api/annotations"
     # A little bit of whitespace in the view throws
     # off our numbers by 5 characters.
-    migrate_annotations(con, document.text, args.id, 5).each do |id, obj|
+    migrate_annotations(con, document.text, args.id.to_i, 5).each do |id, obj|
       obj[:uri] = document.slug
       obj[:legacy_id] = id
 
