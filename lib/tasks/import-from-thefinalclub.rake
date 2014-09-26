@@ -320,12 +320,13 @@ namespace :import_from_thefinalclub do
     end
   end
 
-  def migrate_section_annotations(con, text, section_id, content_id, collections)
+  def migrate_section_annotations(con, text, section_id, content_id, work_id, collections)
     migrated = migrate_annotations(con, text, section_id)
 
     migrated.each do |id, annotator_obj|
       mongo_id = collections[:annotations].insert({
         content_id: content_id,
+        work_id: work_id,
         legacy_id: id,
         annotation: annotator_obj
       })
@@ -381,6 +382,7 @@ namespace :import_from_thefinalclub do
                                              section['content'],
                                              section['id'],
                                              obj[:content_id],
+                                             mongo_work,
                                              collections)
       end
 
