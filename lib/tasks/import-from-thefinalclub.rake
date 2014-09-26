@@ -265,15 +265,72 @@ namespace :import_from_thefinalclub do
     end
   end
 
+  def interpret_linkee_type(type, collections)
+    case type
+      when 'section'
+        ['sections', collections[:contents]]
+      when 'work'
+        ['works', collections[:works]]
+      when 'annotation'
+        ['annotations', collections[:annotations]]
+      else
+        puts "unknown linkee type #{type}"
+        nil
+    end
+  end
+
+  def migrate_annotation_links(con, annotation_id, mongo_id, collections)
+    links = con.query("select * from annotation_links where annotation_linker_id = #{annotation_id}")
+
+    links.each do |link|
+      linkee_id = link['linkee_id']
+      linkee_type = link['linkee_type']
+
+      table = interpret_linkee_type(linkee_type, collections)
+      next if table.nil?
+      table = table[0]
+
+      if con.query("select id from #{table} where id = #{linkee_id}").count.zero?
+        puts "link #{link['id']} points to nonexistent #{linkee_type} #{linkee_id}, skipping"
+        next
+      end
+
+      if linkee_type == 'section'
+        content = con.query("select * from content where section_id = #{linkee_id}").first
+        if not content or not is_content(content['content'])
+          puts "link #{link['id']} points to nonexistent or empty section #{linkee_id}, skipping"
+          next
+        end
+      end
+
+      collections[:links].insert({
+        legacy_id: link['id'],
+        linker: BSON::DBRef.new(collections[:annotations].name, mongo_id),
+        legacy_linkee: {
+          type: linkee_type,
+          id: linkee_id
+        },
+        reason: link['reason'],
+        relationship: {
+          1 => 'influenced',
+          2 => 'influenced_by',
+          3 => 'interpretation'
+        }[link['relationship']]
+      })
+    end
+  end
+
   def migrate_section_annotations(con, text, section_id, content_id, collections)
     migrated = migrate_annotations(con, text, section_id)
 
     migrated.each do |id, annotator_obj|
-      collections[:annotations].insert({
+      mongo_id = collections[:annotations].insert({
         content_id: content_id,
         legacy_id: id,
         annotation: annotator_obj
       })
+
+      migrate_annotation_links(con, id, mongo_id, collections)
     end
 
     return migrated.length
@@ -366,13 +423,51 @@ namespace :import_from_thefinalclub do
     collections[:works].save(work_obj)
   end
 
+  task :resolve_links, :uri do |t, args|
+    con = init_mysql
+    collections = init_mongo(args.uri)
+
+    resolve_links(con, collections)
+  end
+
+  def resolve_links(con, collections)
+    unresolved_links = collections[:links].find({ linkee: { '$exists' => false } },
+                                                { fields: { legacy_linkee: 1 } })
+
+    unresolved_links.each do |link|
+      legacy = link['legacy_linkee']
+      collection = interpret_linkee_type(legacy['type'], collections)
+      next if collection.nil?
+      collection = collection[1]
+
+      legacy_id = legacy['id']
+      if legacy['type'] == 'section'
+        # need to use the corresponding content id, since we are now linking with a content
+        content = con.query("select id from content where section_id = #{legacy_id}").first
+        legacy_id = content['id']
+      end
+
+      linkee = collection.find_one({ legacy_id: legacy_id },
+                                   { fields: {} })
+
+      if linkee
+        collections[:links].update({ _id: link['_id'] }, { '$set' => {
+          linkee: BSON::DBRef.new(collection.name, linkee['_id'])
+        }})
+
+        puts "resolved link #{link['_id']} to #{collection.name} #{linkee['_id']}"
+      end
+    end
+  end
+
   def init_mongo(uri)
     db = Mongo::MongoClient.from_uri(uri).db
 
     return {
       works: db.collection('works'),
       contents: db.collection('sectionContents'),
-      annotations: db.collection('annotations')
+      annotations: db.collection('annotations'),
+      links: db.collection('links')
     }
   end
 
