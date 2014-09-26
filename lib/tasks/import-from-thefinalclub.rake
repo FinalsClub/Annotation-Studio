@@ -468,6 +468,29 @@ namespace :import_from_thefinalclub do
     end
   end
 
+  def pop_docs(collection, query)
+    collection.find(query).each do |doc|
+      yield doc
+    end
+    collection.remove(query)
+  end
+
+  task :unmigrate_work, [:id, :uri] do |t, args|
+    collections = init_mongo(args.uri)
+
+    pop_docs(collections[:works], { legacy_id: args.id.to_i }) do |work|
+      pop_docs(collections[:contents], { work_id: work['_id'] }) do |content|
+        pop_docs(collections[:annotations], { content_id: content['_id'] }) do |annotation|
+          ref = BSON::DBRef.new(collections[:annotations].name, annotation['_id'])
+          collections[:links].remove({ linker: ref })
+          collections[:links].update({ linkee: ref },
+                                     { '$unset' => { linkee: nil } },
+                                     { multi: true })
+        end
+      end
+    end
+  end
+
   def init_mongo(uri)
     db = Mongo::MongoClient.from_uri(uri).db
 
