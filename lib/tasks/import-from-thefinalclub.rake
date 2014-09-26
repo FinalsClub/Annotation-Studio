@@ -303,7 +303,7 @@ namespace :import_from_thefinalclub do
       end
 
       obj = {
-        name: stripslashes(name).strip,
+        name: Nokogiri::HTML(stripslashes(name)).text.strip,
         legacy_id: section['id']
       }
 
