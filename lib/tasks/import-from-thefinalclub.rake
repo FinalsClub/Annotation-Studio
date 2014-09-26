@@ -310,7 +310,7 @@ namespace :import_from_thefinalclub do
           type: linkee_type,
           id: linkee_id
         },
-        reason: link['reason'],
+        reason: link['reason'].strip,
         relationship: {
           1 => 'influenced',
           2 => 'influenced_by',
@@ -411,15 +411,15 @@ namespace :import_from_thefinalclub do
 
     summary = work['summary']
     if summary and not summary.empty?
-      summary = Nokogiri::HTML(stripslashes(work['summary'])).text
+      summary = Nokogiri::HTML(stripslashes(work['summary'])).text.strip
     else
       summary = nil
     end
 
     work_obj = {
       _id: work_id,
-      title: stripslashes(work['title']),
-      author: Nokogiri::HTML(stripslashes(work['author'])).text,
+      title: stripslashes(work['title']).strip,
+      author: Nokogiri::HTML(stripslashes(work['author'])).text.strip,
       summary: summary,
       introEssay: intro,
       year: year,
