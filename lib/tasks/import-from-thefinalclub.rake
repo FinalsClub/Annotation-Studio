@@ -378,12 +378,18 @@ namespace :import_from_thefinalclub do
           html: section['content']
         })
 
-        annos += migrate_section_annotations(con,
-                                             section['content'],
-                                             section['id'],
-                                             obj[:content_id],
-                                             mongo_work,
-                                             collections)
+        section_annos = migrate_section_annotations(con,
+                                                    section['content'],
+                                                    section['id'],
+                                                    obj[:content_id],
+                                                    mongo_work,
+                                                    collections)
+
+        collections[:contents].update({ _id: obj[:content_id] }, { '$set' => {
+          annotationsCount: section_annos
+        }})
+
+        annos += section_annos
       end
 
       ret << obj
