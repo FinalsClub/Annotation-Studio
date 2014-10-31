@@ -1,5 +1,3 @@
-<?php
-
 function connect() {
   /* connect to the mysql database */
   global $CONFIG;
@@ -133,17 +131,10 @@ function generate_content($section_content, $page, &$words_raw) {
 // don't care
 error_reporting(0);
 
-if (sizeof($argv) != 2) {
-  die();
-}
-
 connect();
 
-$section_id = (int)$argv[1];
 $content = get_content($section_id);
 
 // separate content into words
 $words_raw = array();
 $content = generate_content($content, "view-work", $words_raw);
-?>
-<?=$content?>

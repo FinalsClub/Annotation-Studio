@@ -4,7 +4,6 @@ require 'net/http'
 require 'json'
 
 require 'nokogiri'
-require 'open3'
 
 require 'phuby'
 
@@ -42,6 +41,7 @@ namespace :import_from_thefinalclub do
   task :check_annotated_sections do
     con = init_mysql
     annotated_sections = con.query('select content.section_id, content.content from content where (select count(*) from annotations where annotations.section_id = content.section_id) > 0')
+    script = File.read(File.expand_path('../generate_content.php', __FILE__))
 
     annotated_sections.each do |row|
       puts "Checking section #{row['section_id']}"
@@ -52,8 +52,11 @@ namespace :import_from_thefinalclub do
         end
       end
 
-      script = File.expand_path('../generate_content.php', __FILE__)
-      php_generated, status = Open3.capture2('php', script, row['section_id'].to_s)
+      php_generated = Phuby::Runtime.php do |rt|
+        rt['section_id'] = row['section_id']
+        rt.eval(script)
+        rt['content']
+      end
       php_generated.gsub!("\r\n", "\n")
       ruby_generated, words = generate_content(row['content'])
       ruby_generated.gsub!("\r\n", "\n")
